@@ -1,0 +1,57 @@
+---
+
+## `templates/AGENTS.md.tmpl`
+
+```md
+# Agents Guide: {{PROJECT_NAME}}
+
+This file is the operating guide for humans and AI assistants working in this repo.
+It should evolve with the project.
+
+## Principles
+- Prefer small, reviewable changes.
+- Keep behaviour changes documented (README and/or CHANGELOG).
+- If you introduce a new tool, dependency, or convention, update this file.
+
+## Workflow
+- Start work on a new branch (never commit directly to main unless explicitly instructed).
+- Push to remote only when the solution is ready for review.
+- Merge via PR.
+
+## Repo map
+Document the important parts of the repository.
+
+- `src/` (or equivalent): main code
+- `tests/`: tests
+- `docs/`: documentation
+- `scripts/`: automation
+- `infra/` or `deploy/`: deployment
+- `assets/`: static assets
+
+(Adjust to match the actual repo.)
+
+## How to run
+- Build:
+- Test:
+- Lint/format:
+- Start (dev):
+- Start (prod):
+
+## Conventions
+- Naming:
+- Error handling:
+- Logging/observability:
+- Configuration:
+- Versioning/release process:
+
+## Definition of done
+A change is “done” when:
+- It works locally
+- Tests pass (or are updated)
+- Docs updated if behaviour changed
+- No secrets committed
+
+## Decision log
+Record notable decisions and trade-offs.
+
+- YYYY-MM-DD — Decision: … / Reason: … / Trade-offs: …
