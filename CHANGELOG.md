@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1] — 2026-02-07
+
+### Fixes
+
+- Auto-switch to default branch and clean up merged branches when running create-release
+- Use annotated tags so they push with `--follow-tags`, and create provider releases with changelog notes
+
 ## [0.1.0] — 2026-02-07
 
 ### Features
