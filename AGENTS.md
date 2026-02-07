@@ -30,8 +30,11 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 - `pi-extensions/` — pi coding agent extensions (currently empty)
 - `skills/` — pi coding agent skills
-- `skills/repo-docs/` — repo-docs skill: bootstraps core repository documentation from templates
-- `skills/repo-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
+- `skills/create-branch/` — create-branch: new branch from up-to-date default branch
+- `skills/create-pr/` — create-pr: push branch and create a squash-merge PR
+- `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
+- `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
+- `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
 
 ## Merge strategy
 
