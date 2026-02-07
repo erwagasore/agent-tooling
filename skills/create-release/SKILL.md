@@ -31,6 +31,7 @@ Create a release from the current state of the default branch.
    - Confirm with user before writing.
 6. **Update manifest** — if a manifest file exists, update its version to the new value.
 7. **Commit**: `git commit -am "chore: release vX.Y.Z"`.
-8. **Tag**: `git tag vX.Y.Z`.
+8. **Tag**: `git tag -a vX.Y.Z -m "vX.Y.Z"` (annotated, so `--follow-tags` pushes it).
 9. **Push** — only after user approves. `git push origin {default} --follow-tags`.
-10. **Summary**: version (old → new), changelog entries, tag, files updated.
+10. **GitHub/GitLab/Gitea release** — if provider supports it, create a release from the tag using the changelog section as notes. Use `gh release create` (GitHub), `glab release create` (GitLab), or the Gitea API.
+11. **Summary**: version (old → new), changelog entries, tag, files updated.
