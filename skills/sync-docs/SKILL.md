@@ -1,6 +1,6 @@
 ---
-name: repo-docs
-description: Bootstrap core repo docs from templates. Non-destructive.
+name: sync-docs
+description: Create or update core repo docs from templates. Non-destructive.
 ---
 
 Create at repo root if missing: README.md, AGENTS.md, docs/index.md, LICENSE.
