@@ -22,7 +22,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 - Semantic versioning.
 - Versions derived from Conventional Commits.
-- Release performed locally via `/init-release` (no CI required).
+- Release performed locally via `/create-release` (no CI required).
 - Manifest (if present) is source of truth.
 - Tags: vX.Y.Z
 
@@ -32,6 +32,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/` — pi coding agent skills
 - `skills/create-branch/` — create-branch: new branch from up-to-date default branch
 - `skills/create-pr/` — create-pr: push branch and create a squash-merge PR
+- `skills/create-release/` — create-release: version, changelog, tag and push a release locally
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
 - `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
