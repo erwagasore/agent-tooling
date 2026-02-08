@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0] — 2026-02-08
+
+### Features
+
+- Add peculiars extension — witty context-aware status messages during agent processing, covering tool calls, turn transitions, and agent start
+
 ## [0.2.0] — 2026-02-08
 
 ### Features
