@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0] — 2026-02-08
+
+### Features
+
+- Add create-skill: a meta-skill that scaffolds new skills following the standard lifecycle architecture
+
+### Other
+
+- Add quickstart steps to README with clone, symlink, and usage instructions
+
 ## [0.1.1] — 2026-02-07
 
 ### Fixes
