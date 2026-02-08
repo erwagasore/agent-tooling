@@ -55,7 +55,4 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 - **Entry point**: `skills/` — each subdirectory is a self-contained pi skill with a `SKILL.md` and supporting files.
 - **Domain**: reusable pi coding agent extensions and skills, publicly shared under MIT.
-
-## Decisions
-
-- 2026-02-07 — Initial scaffolding.
+- **History**: see [CHANGELOG.md](CHANGELOG.md) for all release history and decisions.
