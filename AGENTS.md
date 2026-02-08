@@ -28,7 +28,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Repo map
 
-- `pi-extensions/` — pi coding agent extensions (currently empty)
+- `pi-extensions/` — pi coding agent extensions
+- `pi-extensions/peculiars/` — peculiars: witty status messages during agent processing
 - `skills/` — pi coding agent skills
 - `skills/create-branch/` — create-branch: new branch from up-to-date default branch
 - `skills/create-pr/` — create-pr: push branch and create a squash-merge PR
