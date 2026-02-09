@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0] — 2026-02-09
+
+### Features
+
+- Add bootstrap-project composite skill — one-command project setup composing init-repo, sync-docs, and create-branch
+- Add ship-feature composite skill — end-to-end feature delivery with state-machine design (open PR → wait → land)
+
 ## [0.4.0] — 2026-02-09
 
 ### Features
