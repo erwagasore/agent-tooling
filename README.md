@@ -11,7 +11,7 @@ pi install git:github.com/erwagasore/agent-tooling
 That's it. All skills and extensions are available immediately.
 
 <details>
-<summary>Manual setup</summary>
+<summary>Manual setup (pi)</summary>
 
 1. Clone the repo:
    ```bash
@@ -26,6 +26,53 @@ That's it. All skills and extensions are available immediately.
    ln -s "$(pwd)/agent-tooling/pi-extensions" ~/.pi/agent/extensions
    ```
 4. Reload your pi session.
+
+</details>
+
+<details>
+<summary>Claude Code</summary>
+
+Clone the repo and add the skills directory to your settings:
+
+```bash
+git clone git@github.com:erwagasore/agent-tooling.git
+```
+
+In your project's `.claude/settings.json` (or global `~/.claude/settings.json`):
+
+```json
+{
+  "skills": ["/path/to/agent-tooling/skills"]
+}
+```
+
+Skills follow the [Agent Skills standard](https://agentskills.io) and work as slash commands.
+
+</details>
+
+<details>
+<summary>OpenAI Codex</summary>
+
+Clone the repo and add the skills directory to your settings:
+
+```bash
+git clone git@github.com:erwagasore/agent-tooling.git
+```
+
+In your project's `.codex/settings.json` (or global `~/.codex/settings.json`):
+
+```json
+{
+  "skills": ["/path/to/agent-tooling/skills"]
+}
+```
+
+</details>
+
+<details>
+<summary>Other agents</summary>
+
+These skills are plain Markdown files following the [Agent Skills standard](https://agentskills.io). Any agent that supports the standard can load them. For agents without native skill support, you can copy the contents of any `SKILL.md` into your system prompt or context files (e.g. `AGENTS.md`, `CLAUDE.md`).
 
 </details>
 
