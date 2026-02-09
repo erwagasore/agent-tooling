@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.0] — 2026-02-09
+
+### Features
+
+- Add worktree support to create-branch, cleanup-branch, and ship-feature — use `/create-branch worktree` for a separate directory; cleanup and landing auto-detect the mode
+
 ## [0.5.0] — 2026-02-09
 
 ### Features
