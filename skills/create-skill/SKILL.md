@@ -8,10 +8,11 @@ Create a new skill directory with a SKILL.md that follows the project's conventi
 ## Rules
 
 1. **Gather** from user:
-   - **Name**: must be `<verb>-<noun>`. Verbs: `init` (one-time), `create` (repeated), `sync` (reconcile), or propose a new verb with justification.
+   - **Name**: must be `<verb>-<noun>`. Verbs: `init` (one-time), `create` (repeated), `sync` (reconcile), `check` (validate), `detect` (read context), `cleanup` (remove stale state), or propose a new verb with justification.
    - **Purpose**: one-line description.
    - **What it does**: brief explanation to derive the rules from.
-2. **Scaffold** `skills/{name}/SKILL.md` using the template below. Populate rules from the user's description using the standard lifecycle phases — omit phases that don't apply:
+2. **Conflict check** — scan `skills/` for an existing directory matching the name. If found, abort and suggest a different name.
+3. **Scaffold** `skills/{name}/SKILL.md` using the template below. Populate rules from the user's description using the standard lifecycle phases — omit phases that don't apply:
    - **Preflight** — validate environment, abort early.
    - **Detect** — read context from repo/environment.
    - **Cleanup** — handle stale state.
@@ -19,16 +20,16 @@ Create a new skill directory with a SKILL.md that follows the project's conventi
    - **Confirm** — present plan to user before side effects.
    - **Execute** — perform the action.
    - **Summary** — report what was done.
-3. **Conventions** to follow:
+4. **Conventions** to follow:
    - Rules: numbered, `**bold phase**` — description.
    - Provider agnostic where applicable (GitHub, GitLab, Gitea).
    - Idempotent: skip work already done.
    - User confirmation before external side effects (push, API calls).
    - Concise: optimise for minimal context.
    - No agent instructions in output files.
-4. **Templates dir**: create `skills/{name}/templates/` only if the skill needs template files.
-5. **Update AGENTS.md**: add the new skill to the repo map.
-6. **Summary**: skill name, path, phases used.
+5. **Templates dir**: create `skills/{name}/templates/` only if the skill needs template files.
+6. **Update AGENTS.md**: add a single entry for the new skill to the repo map. Note: `sync-docs` will regenerate the full repo map section on its next run, so only a minimal entry is needed here.
+7. **Summary**: skill name, path, phases used.
 
 ## Template
 

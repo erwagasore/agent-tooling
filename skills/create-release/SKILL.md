@@ -9,19 +9,19 @@ Create a release from the current state of the default branch.
 
 1. **Preflight** — run `check-preflight` skill.
 2. **Switch to default branch** — run `detect-default-branch` skill. If on a different branch, note it, then run `cleanup-branch` skill, `git fetch origin --prune`, `git checkout {default}`, `git pull origin {default}`.
-3. **Clean check** — abort if working tree is dirty or not up to date with remote.
+3. **Clean check** — run `check-worktree` skill. Additionally abort if not up to date with remote (`git diff HEAD origin/{default} --stat` is non-empty).
 4. **Current version** — determine from (in order):
    - Manifest: `package.json .version`, `Cargo.toml [package] version`, `pyproject.toml [project] version`, or similar.
    - Latest git tag matching `vX.Y.Z`.
    - If neither exists, assume `0.0.0`.
-5. **Analyse commits** since last release tag. Read each commit message and classify:
+5. **Analyse commits** since the last release tag. If no release tags exist, analyse all commits since the initial commit. Read each commit message and classify:
    - `fix:` → patch
    - `feat:` → minor
    - `feat!:` or `BREAKING CHANGE` in body → major
    - Other prefixes → no bump
    - Highest bump wins.
-   - If no bump-worthy commits found, ask user whether to proceed or abort.
-6. **Next version** — increment current version per semver. Confirm with user.
+   - If no bump-worthy commits found, ask user to choose: pick a bump level (patch/minor/major) manually, or abort.
+6. **Next version** — increment current version per semver. If user requests a pre-release, append the pre-release identifier (e.g. `1.2.0-alpha.1`, `1.2.0-beta.1`, `1.2.0-rc.1`). Confirm with user.
 7. **Changelog** — prepend a new section to `CHANGELOG.md` (create file if missing):
    - Header: `## [X.Y.Z] — YYYY-MM-DD`
    - Group entries under: `### Breaking Changes`, `### Features`, `### Fixes`, `### Other` (omit empty groups).
