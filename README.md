@@ -4,6 +4,15 @@ A collection of pi coding agent extensions and skills — ready-made tooling to 
 
 ## Quickstart
 
+```bash
+pi install git:github.com/erwagasore/agent-tooling
+```
+
+That's it. All skills and extensions are available immediately.
+
+<details>
+<summary>Manual setup</summary>
+
 1. Clone the repo:
    ```bash
    git clone git@github.com:erwagasore/agent-tooling.git
@@ -17,6 +26,8 @@ A collection of pi coding agent extensions and skills — ready-made tooling to 
    ln -s "$(pwd)/agent-tooling/pi-extensions" ~/.pi/agent/extensions
    ```
 4. Reload your pi session.
+
+</details>
 
 ### Skills
 
