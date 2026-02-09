@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0] — 2026-02-09
+
+### Features
+
+- Expand ship-feature into a full lifecycle state machine — one command handles branching, committing, pushing, PR creation, and post-merge cleanup from any state
+- Add commit-changes utility skill for staging and committing with Conventional Commit messages
+- Add package.json for pi package installation (`pi install git:github.com/erwagasore/agent-tooling`)
+
+### Other
+
+- Add skill architecture diagram with mermaid composition graph
+- Sync README quickstart to list all 15 skills grouped by layer
+
 ## [0.6.0] — 2026-02-09
 
 ### Features
