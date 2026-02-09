@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1] — 2026-02-09
+
+### Fixes
+
+- sync-docs now updates repo-derived sections in existing files instead of only populating empty ones
+
+### Other
+
+- Extract cross-cutting patterns (preflight, default branch detection, provider detection, merged branch cleanup) into four reusable utility skills
+
 ## [0.3.0] — 2026-02-08
 
 ### Features
