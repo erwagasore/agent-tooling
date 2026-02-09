@@ -22,7 +22,7 @@ A collection of pi coding agent extensions and skills — ready-made tooling to 
 
 **Composite** — end-to-end workflows:
 - `/bootstrap-project` — initialise a new project end-to-end — repo, docs, and first working branch
-- `/ship-feature` — push, create PR, and after merge clean up and land back on default branch
+- `/ship-feature` — one command for the entire feature lifecycle: commit, branch, push, PR, and post-merge cleanup
 
 **Workflow** — core git operations:
 - `/create-branch` — new branch from up-to-date default branch (supports worktree mode via `/create-branch worktree`)
@@ -36,6 +36,7 @@ A collection of pi coding agent extensions and skills — ready-made tooling to 
 - `/check-preflight` — validate git repo and remote
 - `/check-worktree` — verify the working tree is clean
 - `/cleanup-branch` — delete merged local branch (auto-detects branch vs worktree)
+- `/commit-changes` — stage and commit with a Conventional Commit message
 - `/detect-default-branch` — detect the default branch
 - `/detect-existing-pr` — check for an open PR on the current branch
 - `/detect-provider` — detect git hosting provider and CLI
