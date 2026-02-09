@@ -14,9 +14,11 @@ Templates: `templates/` relative to this file.
 2. Placeholders:
    - {{PROJECT_NAME}} → basename of repo root
    - {{DESCRIPTION}} → one-liner from package.json / Cargo.toml / pyproject.toml, or "TODO: add project description"
+   - {{OWNER}} → repository owner from `git remote get-url origin`, or ask user if not determinable
    - {{DATE}} → YYYY-MM-DD local
    - {{YEAR}} → four-digit year local
 3. **Create** — for missing or near-empty (≤ 3 non-blank lines) files:
+   - If the file exists with 1–3 non-blank lines, show its current content and confirm with the user before overwriting.
    - Populate from templates. Replace placeholders. Strip HTML comments from output.
    - AGENTS.md: fill "Repo map" and "Orientation" per scanning rules below.
    - README.md: fill "Quickstart" per scanning rules below. "Structure" links to AGENTS.md#repo-map — don't duplicate.
