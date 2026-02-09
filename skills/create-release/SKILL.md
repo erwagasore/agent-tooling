@@ -7,8 +7,8 @@ Create a release from the current state of the default branch.
 
 ## Rules
 
-1. **Preflight** — abort if not a git repo or no remote configured.
-2. **Switch to default branch**: detect via `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null`, fallback `main`. If on a different branch, note it, then `git fetch origin --prune`, `git checkout {default}`, `git pull origin {default}`. If the previous branch was merged (remote branch deleted), delete it locally.
+1. **Preflight** — run `check-preflight` skill.
+2. **Switch to default branch** — run `detect-default-branch` skill. If on a different branch, note it, then run `cleanup-branch` skill, `git fetch origin --prune`, `git checkout {default}`, `git pull origin {default}`.
 3. **Clean check** — abort if working tree is dirty or not up to date with remote.
 4. **Current version** — determine from (in order):
    - Manifest: `package.json .version`, `Cargo.toml [package] version`, `pyproject.toml [project] version`, or similar.
@@ -31,5 +31,5 @@ Create a release from the current state of the default branch.
 9. **Commit**: `git commit -am "chore: release vX.Y.Z"`.
 10. **Tag**: `git tag -a vX.Y.Z -m "vX.Y.Z"` (annotated, so `--follow-tags` pushes it).
 11. **Push** — only after user approves. `git push origin {default} --follow-tags`.
-12. **GitHub/GitLab/Gitea release** — if provider supports it, create a release from the tag using the changelog section as notes. Use `gh release create` (GitHub), `glab release create` (GitLab), or the Gitea API.
+12. **Provider release** — run `detect-provider` skill. If provider supports it, create a release from the tag using the changelog section as notes. Use `gh release create` (GitHub), `glab release create` (GitLab), or the Gitea API.
 13. **Summary**: version (old → new), changelog entries, tag, files updated.

@@ -7,9 +7,9 @@ Start a new feature/fix branch following Conventional Commit naming.
 
 ## Rules
 
-1. **Preflight** — abort if not a git repo or no remote configured.
-2. **Detect default branch**: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null`, fallback `main`.
-3. **Cleanup**: if current branch is not the default and has been merged (remote branch deleted or PR merged), delete it locally after switching away.
+1. **Preflight** — run `check-preflight` skill.
+2. **Detect default branch** — run `detect-default-branch` skill.
+3. **Cleanup** — run `cleanup-branch` skill.
 4. **Update**: `git fetch origin --prune` then `git checkout {default}` and `git pull origin {default}`.
 5. **Branch name** — ask user for intent, then build name as `{type}/{short-description}`:
    - Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, `style`, `perf`, `wip`.

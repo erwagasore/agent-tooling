@@ -31,10 +31,14 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `pi-extensions/` — pi coding agent extensions
 - `pi-extensions/peculiars/` — peculiars: witty status messages during agent processing
 - `skills/` — pi coding agent skills
+- `skills/check-preflight/` — check-preflight: validate git repo and remote before proceeding
+- `skills/cleanup-branch/` — cleanup-branch: delete local branch if merged and remote is gone
 - `skills/create-branch/` — create-branch: new branch from up-to-date default branch
 - `skills/create-pr/` — create-pr: push branch and create a squash-merge PR
 - `skills/create-skill/` — create-skill: scaffold a new pi skill following the standard architecture
 - `skills/create-release/` — create-release: version, changelog, tag and push a release locally
+- `skills/detect-default-branch/` — detect-default-branch: detect the default branch of the current repo
+- `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
 - `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)

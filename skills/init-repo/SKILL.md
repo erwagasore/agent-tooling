@@ -16,12 +16,8 @@ Ensure the current directory is a fully configured git repo with branch protecti
    - **Visibility**: ask user (private or public). Default to private.
    - Verify required CLI is available (`gh`, `glab`, or `tea`). Abort if missing.
    - Create remote repo, add as `origin`, push default branch.
-4. **Detect provider** from hostname in `git remote get-url origin`:
-   - `github.com` → GitHub
-   - `gitlab.com` → GitLab
-   - `codeberg.org` → Codeberg (Gitea)
-   - Unknown → ask the user.
-5. **Detect default branch**: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null`, fallback `main`.
+4. **Detect provider** — run `detect-provider` skill.
+5. **Detect default branch** — run `detect-default-branch` skill.
 6. **Apply protection** on the default branch. Skip if equivalent already exists.
 7. **Summary**: repo, provider, owner, branch, what was created/skipped.
 
