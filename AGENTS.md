@@ -31,6 +31,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `pi-extensions/` — pi coding agent extensions
 - `pi-extensions/peculiars/` — peculiars: witty status messages during agent processing
 - `skills/` — pi coding agent skills
+- `skills/bootstrap-project/` — bootstrap-project: initialise a new project end-to-end — repo, docs, and first working branch
 - `skills/check-preflight/` — check-preflight: validate git repo and remote before proceeding
 - `skills/check-worktree/` — check-worktree: verify the git working tree is clean
 - `skills/cleanup-branch/` — cleanup-branch: delete local branch if merged and remote is gone
@@ -42,6 +43,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/detect-existing-pr/` — detect-existing-pr: check whether an open PR already exists for the current branch
 - `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
+- `skills/ship-feature/` — ship-feature: push, create PR, and after merge clean up and land back on default branch
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
 - `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
 
