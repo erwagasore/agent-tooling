@@ -36,4 +36,4 @@ End-to-end feature delivery — run once to open a PR, run again after merge to 
 
 5. **Cleanup** — run `cleanup-branch` skill to delete the local branch and switch to the default branch.
 6. **Update** — `git fetch origin --prune` then `git pull origin {default}`.
-7. **Summary**: landed on default branch, local branch deleted, up to date.
+7. **Summary**: landed on default branch, local branch deleted, up to date. Suggest: run `/create-release` when ready to cut a version.
