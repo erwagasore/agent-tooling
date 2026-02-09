@@ -8,7 +8,7 @@ Create a new skill directory with a SKILL.md that follows the project's conventi
 ## Rules
 
 1. **Gather** from user:
-   - **Name**: must be `<verb>-<noun>`. Verbs: `init` (one-time), `create` (repeated), `sync` (reconcile), `check` (validate), `detect` (read context), `cleanup` (remove stale state), `bootstrap` (one-time composite setup), `ship` (end-to-end delivery), or propose a new verb with justification.
+   - **Name**: must be `<verb>-<noun>`. Verbs: `init` (one-time), `create` (repeated), `sync` (reconcile), `check` (validate), `detect` (read context), `cleanup` (remove stale state), `commit` (persist state), `bootstrap` (one-time composite setup), `ship` (end-to-end delivery), or propose a new verb with justification.
    - **Purpose**: one-line description.
    - **What it does**: brief explanation to derive the rules from.
 2. **Conflict check** — scan `skills/` for an existing directory matching the name. If found, abort and suggest a different name.

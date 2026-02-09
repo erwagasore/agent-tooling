@@ -35,6 +35,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/check-preflight/` — check-preflight: validate git repo and remote before proceeding
 - `skills/check-worktree/` — check-worktree: verify the git working tree is clean
 - `skills/cleanup-branch/` — cleanup-branch: delete local branch if merged and remote is gone
+- `skills/commit-changes/` — commit-changes: stage and commit with a Conventional Commit message
 - `skills/create-branch/` — create-branch: new branch from up-to-date default branch
 - `skills/create-pr/` — create-pr: push branch and create a squash-merge PR
 - `skills/create-skill/` — create-skill: scaffold a new pi skill following the standard architecture
