@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0] — 2026-02-09
+
+### Features
+
+- Add check-worktree and detect-existing-pr utility skills for composability
+- Add dirty worktree guard and branch name collision check to create-branch
+- Add existing PR detection and draft PR support to create-pr
+- Add pre-release version support and no-bump manual override to create-release
+- Add .gitignore generation and next-steps guidance to init-repo
+- Add {{OWNER}} placeholder and near-empty overwrite confirmation to sync-docs
+- Add conflict check and expanded verb list to create-skill
+
 ## [0.3.1] — 2026-02-09
 
 ### Fixes
