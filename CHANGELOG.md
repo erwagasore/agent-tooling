@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.1] — 2026-02-09
+
+### Fixes
+
+- Add branch guard to commit-changes — prevents committing directly on the default branch
+
+### Other
+
+- Update quickstart with `pi install` as default and collapsible manual setup
+- Add setup instructions for Claude Code, Codex, and other agents
+
 ## [0.7.0] — 2026-02-09
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "agent-tooling",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Pi coding agent extensions and skills",
   "pi": {
     "skills": ["./skills"],
