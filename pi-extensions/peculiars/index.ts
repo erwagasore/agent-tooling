@@ -1,15 +1,13 @@
 /**
  * peculiars — witty status messages during agent processing.
  *
- * Shows context-aware quips in the header-line (Emacs/RPC) and
- * working indicator (TUI) as the agent thinks, reads, edits, and runs commands.
+ * Shows context-aware quips in the working indicator (TUI) as the
+ * agent thinks, reads, edits, and runs commands.
  *
- * Uses setStatus (works everywhere) + setWorkingMessage (TUI bonus).
+ * Uses setWorkingMessage to replace the default working indicator text.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-
-const KEY = "peculiars";
 
 // ── Message pools ────────────────────────────────────────────
 
@@ -77,7 +75,6 @@ function pick(arr: string[]): string {
 
 function setVibe(ctx: ExtensionContext, message?: string) {
   if (!ctx.hasUI) return;
-  ctx.ui.setStatus(KEY, message);
   ctx.ui.setWorkingMessage(message);
 }
 
