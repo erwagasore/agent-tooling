@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.2] — 2026-03-19
+
+### Fixes
+
+- Remove duplicate status display in peculiars extension — drop redundant `setStatus` call, keep only `setWorkingMessage`
+
+### Other
+
+- Add `.env.schema` for OANDA and FRED API credentials
+
 ## [0.7.1] — 2026-02-09
 
 ### Fixes
