@@ -22,7 +22,7 @@
   Create `pi-extensions/git-guard/` exposing `git_guard({ requireClean, requireRemote })`, replacing the always-paired `check-preflight` + `check-worktree` calls. Anchored to SPEC § Extensions / git-guard.
   *Done when:* the tool throws structured errors that downstream skills can consume, and behaviour is covered by a fixture-repo test.
 
-- [ ] **`refactor(skills): slim utility skills to delegate to git-context/git-guard`**
+- [x] **`refactor(skills): slim utility skills to delegate to git-context/git-guard`**
   Trim `skills/check-preflight/SKILL.md`, `skills/check-worktree/SKILL.md`, `skills/detect-default-branch/SKILL.md`, `skills/detect-existing-pr/SKILL.md`, `skills/detect-provider/SKILL.md`, and `skills/cleanup-branch/SKILL.md` to ≤ 20 lines each, deferring to the extension tools. Anchored to SPEC § Utility layer.
   *Done when:* each of the six SKILL.md files is ≤ 20 lines and references its backing extension tool by name.
 
