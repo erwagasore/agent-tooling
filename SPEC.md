@@ -234,15 +234,16 @@ When in doubt:
 
 ### Worktree mode
 
-Branch mode is the default. Worktree mode is opt-in at creation, auto-detected at cleanup:
+Branch mode is the default. Worktree mode lives behind `/wt`; the branching skills and `/ship`'s pr-merged phase share the same underlying `removeWorktree` helper from `_shared/git-internals`.
 
 ```
 /create-branch              → branch mode (git checkout -b)
-/create-branch worktree     → worktree mode (git worktree add)
-/ship-feature               → land phase auto-detects and handles both
+/wt new <branch>            → worktree mode (linked worktree at ../<repo>-<sanitized>)
+/wt land                    → from inside a worktree, remove and prune
+/ship                       → pr-merged phase auto-detects mode and lands appropriately
 ```
 
-Once `git-worktree` lands, this fork moves out of `create-branch` and `ship-feature`.
+`/wt` cannot `cd` for the user — it prints an explicit `cd "<path>"` hint after each operation.
 
 ### File layout
 
