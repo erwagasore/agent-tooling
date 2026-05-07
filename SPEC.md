@@ -92,6 +92,7 @@ git_context(): {
   isClean: boolean;
   hasRemote: boolean;
   existingPr: { number: number; url: string; state: "open" | "merged" | "closed" } | null;
+  warnings: string[];   // soft failures (e.g. missing gh CLI) — tool never throws
 }
 ```
 
@@ -105,7 +106,12 @@ git_guard(opts: {
   requireRemote?: boolean;
   requireBranch?: "default" | "non-default";
   requireMode?: "branch" | "worktree";
-}): void   // throws structured error on failure
+}): {
+  ok: boolean;
+  failures: { check: string; message: string }[];
+  state: { isClean: boolean; hasRemote: boolean; currentBranch: string; defaultBranch: string; mode: "branch" | "worktree" };
+}
+// isError: true on any failure (pi tools surface failure via isError, not exceptions)
 ```
 
 ### `git-ship`
@@ -113,14 +119,18 @@ git_guard(opts: {
 State-machine slash command. Replaces the prose state machine inside `ship-feature`.
 
 ```
-/ship             → detect state, dispatch phase
-/ship --status    → print state, do nothing
-
-States:
-  no-pr     → push branch, create PR, print URL
-  pr-open   → print URL, exit
-  pr-merged → cleanup branch, land on default
+/ship          → detect state, dispatch phase
+/ship status   → print state and predicted action, do nothing
 ```
+
+| State | Trigger | Action |
+|---|---|---|
+| `default-clean` | on default branch, worktree clean | Print "nothing to ship". |
+| `default-dirty` | on default branch, worktree dirty | Print "create a branch first". |
+| `no-pr` | on feature branch, no existing PR | Show diff + commits, confirm, push, prompt for title (default = last commit subject), auto-derive body, create PR via `gh`/`glab`, print URL. |
+| `pr-open` | on feature branch, PR open | Print URL, exit — wait for merge then run `/ship` again. |
+| `pr-merged` | on feature branch, PR merged | Cleanup branch (auto-detects branch vs worktree mode), `git fetch --prune`, `git pull` default. |
+| `pr-closed` | on feature branch, PR closed without merge | Print warning. |
 
 ### `git-pr`
 
@@ -152,9 +162,9 @@ Hides the branch-vs-worktree fork from the rest of the system.
 
 | Extension | Status |
 |---|---|
-| `git-context` | planned (current cycle) |
-| `git-guard` | planned (current cycle) |
-| `git-ship` | planned (current cycle) |
+| `git-context` | implemented |
+| `git-guard` | implemented |
+| `git-ship` | implemented |
 | `git-pr` | deferred (next cycle) |
 | `git-release` | deferred (next cycle) |
 | `git-worktree` | deferred (next cycle) |
@@ -171,7 +181,7 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 | `check-worktree` | Abort if uncommitted changes | `git-guard` |
 | `cleanup-branch` | Delete merged branch (auto-detects branch vs worktree) | `git-context` + plain git |
 | `detect-default-branch` | Resolve default branch name | `git-context` |
-| `detect-existing-pr` | Find open PR for current branch | `git-context` |
+| `detect-existing-pr` | Find latest PR for current branch (any state — callers filter) | `git-context` |
 | `detect-provider` | Identify git host and CLI | `git-context` |
 
 ### Workflow
