@@ -17,16 +17,20 @@ import { Type, type Static } from "typebox";
 import {
 	detectDefaultBranch,
 	detectMode,
+	detectProvider,
 	type ExecRunner,
+	type ExistingPr,
+	findExistingPr,
 	type GitMode,
+	type PrState,
+	type Provider,
 	tryExec,
 } from "../_shared/git-internals.ts";
 
 // ── Public types ─────────────────────────────────────────────
 
-export type GitProvider = "github" | "gitlab" | "bitbucket" | "unknown";
-export type { GitMode };
-export type PrState = "open" | "merged" | "closed";
+export type GitProvider = Provider;
+export type { GitMode, PrState };
 
 export interface GitContextResult {
 	provider: GitProvider;
@@ -35,7 +39,7 @@ export interface GitContextResult {
 	mode: GitMode;
 	isClean: boolean;
 	hasRemote: boolean;
-	existingPr: { number: number; url: string; state: PrState } | null;
+	existingPr: ExistingPr | null;
 	warnings: string[];
 }
 
@@ -43,91 +47,6 @@ const PARAMS = Type.Object({});
 export type GitContextParams = Static<typeof PARAMS>;
 
 // ── Helpers ──────────────────────────────────────────────────
-
-function detectProvider(remoteUrl: string | null): GitProvider {
-	if (!remoteUrl) return "unknown";
-	if (/github\.com[:/]/i.test(remoteUrl)) return "github";
-	if (/gitlab\.[a-z.]+[:/]/i.test(remoteUrl) || /\bgitlab\b/i.test(remoteUrl)) return "gitlab";
-	if (/bitbucket\.org[:/]/i.test(remoteUrl)) return "bitbucket";
-	return "unknown";
-}
-
-function normalizePrState(raw: string): PrState {
-	const v = raw.toLowerCase();
-	if (v === "merged") return "merged";
-	if (v === "closed") return "closed";
-	return "open";
-}
-
-async function detectExistingPr(
-	exec: ExecRunner,
-	provider: GitProvider,
-	branch: string,
-	warnings: string[],
-	signal?: AbortSignal,
-): Promise<GitContextResult["existingPr"]> {
-	if (!branch) return null;
-
-	if (provider === "github") {
-		const out = await tryExec(
-			exec,
-			"gh",
-			[
-				"pr",
-				"list",
-				"--head",
-				branch,
-				"--state",
-				"all",
-				"--json",
-				"number,url,state",
-				"--limit",
-				"1",
-			],
-			signal,
-		);
-		if (out === null) {
-			warnings.push("gh CLI unavailable or unauthenticated; existingPr left as null");
-			return null;
-		}
-		try {
-			const arr = JSON.parse(out) as Array<{ number: number; url: string; state: string }>;
-			if (!arr.length) return null;
-			const p = arr[0];
-			if (!p) return null;
-			return { number: p.number, url: p.url, state: normalizePrState(p.state) };
-		} catch {
-			warnings.push("Failed to parse gh pr list JSON; existingPr left as null");
-			return null;
-		}
-	}
-
-	if (provider === "gitlab") {
-		const out = await tryExec(
-			exec,
-			"glab",
-			["mr", "list", "--source-branch", branch, "--all", "--output", "json"],
-			signal,
-		);
-		if (out === null) {
-			warnings.push("glab CLI unavailable or unauthenticated; existingPr left as null");
-			return null;
-		}
-		try {
-			const arr = JSON.parse(out) as Array<{ iid: number; web_url: string; state: string }>;
-			if (!arr.length) return null;
-			const p = arr[0];
-			if (!p) return null;
-			return { number: p.iid, url: p.web_url, state: normalizePrState(p.state) };
-		} catch {
-			warnings.push("Failed to parse glab mr list JSON; existingPr left as null");
-			return null;
-		}
-	}
-
-	warnings.push(`Provider ${provider} not supported for PR detection`);
-	return null;
-}
 
 function formatSummary(r: GitContextResult): string {
 	const lines = [
@@ -178,7 +97,7 @@ export default function gitContextExtension(pi: ExtensionAPI) {
 			const isClean = status === "";
 
 			const existingPr = hasRemote
-				? await detectExistingPr(exec, provider, currentBranch, warnings, signal)
+				? await findExistingPr(exec, provider, currentBranch, signal, warnings)
 				: null;
 
 			const result: GitContextResult = {

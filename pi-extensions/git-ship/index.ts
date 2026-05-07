@@ -7,17 +7,23 @@
  * for PR title; PR body auto-derives from the commit log).
  *
  * Replaces the prose state machine inside the `ship-feature` skill. PR
- * creation shells out to `gh`/`glab` directly until `git-pr` lands.
+ * detection and creation are delegated to the shared `_shared/git-internals`
+ * helpers (consumed by `git-pr` for the tool surface).
  *
  * See SPEC.md § Extensions / git-ship.
  */
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
+	createPr,
 	detectDefaultBranch,
 	detectMode,
+	detectProvider,
 	type ExecRunner,
+	type ExistingPr,
+	findExistingPr,
 	type GitMode,
+	type Provider,
 	tryExec,
 } from "../_shared/git-internals.ts";
 
@@ -31,8 +37,6 @@ type ShipState =
 	| "pr-merged"
 	| "pr-closed";
 
-type Provider = "github" | "gitlab" | "unknown";
-
 interface ShipContext {
 	provider: Provider;
 	defaultBranch: string;
@@ -40,17 +44,10 @@ interface ShipContext {
 	mode: GitMode;
 	isClean: boolean;
 	hasRemote: boolean;
-	existingPr: { number: number; url: string; state: "open" | "merged" | "closed" } | null;
+	existingPr: ExistingPr | null;
 }
 
 // ── State detection ──────────────────────────────────────────
-
-function detectProvider(remoteUrl: string | null): Provider {
-	if (!remoteUrl) return "unknown";
-	if (/github\.com[:/]/i.test(remoteUrl)) return "github";
-	if (/gitlab\.[a-z.]+[:/]/i.test(remoteUrl) || /\bgitlab\b/i.test(remoteUrl)) return "gitlab";
-	return "unknown";
-}
 
 async function readShipContext(exec: ExecRunner, signal?: AbortSignal): Promise<ShipContext> {
 	const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
@@ -62,9 +59,9 @@ async function readShipContext(exec: ExecRunner, signal?: AbortSignal): Promise<
 	const provider = detectProvider(remoteUrl);
 	const hasRemote = remoteUrl !== null;
 
-	let existingPr: ShipContext["existingPr"] = null;
-	if (hasRemote && currentBranch && provider !== "unknown") {
-		existingPr = await fetchExistingPr(exec, provider, currentBranch, signal);
+	let existingPr: ExistingPr | null = null;
+	if (hasRemote && currentBranch) {
+		existingPr = await findExistingPr(exec, provider, currentBranch, signal);
 	}
 
 	return {
@@ -76,68 +73,6 @@ async function readShipContext(exec: ExecRunner, signal?: AbortSignal): Promise<
 		hasRemote,
 		existingPr,
 	};
-}
-
-async function fetchExistingPr(
-	exec: ExecRunner,
-	provider: Provider,
-	branch: string,
-	signal?: AbortSignal,
-): Promise<ShipContext["existingPr"]> {
-	if (provider === "github") {
-		const out = await tryExec(
-			exec,
-			"gh",
-			[
-				"pr",
-				"list",
-				"--head",
-				branch,
-				"--state",
-				"all",
-				"--json",
-				"number,url,state",
-				"--limit",
-				"1",
-			],
-			signal,
-		);
-		if (!out) return null;
-		try {
-			const arr = JSON.parse(out) as Array<{ number: number; url: string; state: string }>;
-			const p = arr[0];
-			if (!p) return null;
-			const state =
-				p.state.toLowerCase() === "merged"
-					? "merged"
-					: p.state.toLowerCase() === "closed"
-						? "closed"
-						: "open";
-			return { number: p.number, url: p.url, state };
-		} catch {
-			return null;
-		}
-	}
-	if (provider === "gitlab") {
-		const out = await tryExec(
-			exec,
-			"glab",
-			["mr", "list", "--source-branch", branch, "--all", "--output", "json"],
-			signal,
-		);
-		if (!out) return null;
-		try {
-			const arr = JSON.parse(out) as Array<{ iid: number; web_url: string; state: string }>;
-			const p = arr[0];
-			if (!p) return null;
-			const state =
-				p.state === "merged" ? "merged" : p.state === "closed" ? "closed" : "open";
-			return { number: p.iid, url: p.web_url, state };
-		} catch {
-			return null;
-		}
-	}
-	return null;
 }
 
 export function detectShipState(c: ShipContext): ShipState {
@@ -224,7 +159,6 @@ async function phaseNoPr(
 		return;
 	}
 
-	// Pre-push diff summary
 	const diffStat = await tryExec(
 		exec,
 		"git",
@@ -267,12 +201,8 @@ async function phaseNoPr(
 	}
 	console.log(push.out);
 
-	// PR title — default to last commit subject
 	const title =
-		(await ctx.ui.input(
-			"PR title (Conventional Commit):",
-			lastSubject,
-		)) ?? lastSubject;
+		(await ctx.ui.input("PR title (Conventional Commit):", lastSubject)) ?? lastSubject;
 	if (!title.trim()) {
 		ctx.ui.notify("Empty PR title; aborting before PR creation.", "warning");
 		return;
@@ -283,19 +213,19 @@ async function phaseNoPr(
 		.map((line) => `- ${line}`)
 		.join("\n")}\n`;
 
-	const cli = c.provider === "github" ? "gh" : "glab";
-	const args =
-		c.provider === "github"
-			? ["pr", "create", "--base", c.defaultBranch, "--head", c.currentBranch, "--title", title, "--body", body]
-			: ["mr", "create", "--target-branch", c.defaultBranch, "--source-branch", c.currentBranch, "--title", title, "--description", body, "--yes"];
-
-	const create = await execLoud(exec, cli, args, signal);
-	if (!create.ok) {
-		ctx.ui.notify(`PR creation failed:\n${create.out}`, "error");
+	const created = await createPr(
+		exec,
+		c.provider,
+		{ title, body, base: c.defaultBranch, head: c.currentBranch },
+		signal,
+	);
+	if (!created.ok) {
+		ctx.ui.notify(`PR creation failed:\n${created.error}`, "error");
 		return;
 	}
-	console.log(create.out);
-	ctx.ui.notify("PR opened. Run `/ship` again after merge to land.", "info");
+	console.log(`Opened PR #${created.number}: ${created.url}`);
+	ctx.ui.notify(`PR #${created.number} opened — ${created.url}`, "info");
+	ctx.ui.notify("Run `/ship` again after merge to land.", "info");
 }
 
 async function phasePrOpen(c: ShipContext, ctx: ExtensionCommandContext): Promise<void> {
@@ -311,7 +241,6 @@ async function phasePrMerged(
 	ctx: ExtensionCommandContext,
 	signal?: AbortSignal,
 ): Promise<void> {
-	// Confirm remote branch is gone (squash-merge usually deletes the remote head)
 	const remoteHead = await tryExec(
 		exec,
 		"git",
@@ -358,8 +287,6 @@ async function phasePrMerged(
 		}
 		const del = await execLoud(exec, "git", ["branch", "-d", previousBranch], signal);
 		if (!del.ok) {
-			// Squash-merged branches look unmerged to git; safe to force-delete
-			// because we already confirmed the remote head is gone (or user agreed).
 			const force = await execLoud(exec, "git", ["branch", "-D", previousBranch], signal);
 			if (!force.ok) {
 				ctx.ui.notify(`Failed to delete branch ${previousBranch}:\n${force.out}`, "error");
@@ -406,10 +333,7 @@ export default function gitShipExtension(pi: ExtensionAPI) {
 
 			switch (state) {
 				case "default-clean":
-					ctx.ui.notify(
-						"Nothing to ship. Use `/create-branch` to start work.",
-						"info",
-					);
+					ctx.ui.notify("Nothing to ship. Use `/create-branch` to start work.", "info");
 					return;
 				case "default-dirty":
 					ctx.ui.notify(

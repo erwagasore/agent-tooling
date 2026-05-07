@@ -18,6 +18,28 @@ export type ExecRunner = (
 
 export type GitMode = "branch" | "worktree";
 
+export type Provider = "github" | "gitlab" | "bitbucket" | "unknown";
+
+export type PrState = "open" | "merged" | "closed";
+
+export interface ExistingPr {
+	number: number;
+	url: string;
+	state: PrState;
+}
+
+export interface CreatePrOptions {
+	title: string;
+	body?: string;
+	draft?: boolean;
+	base: string;
+	head: string;
+}
+
+export type CreatePrResult =
+	| { ok: true; number: number; url: string }
+	| { ok: false; error: string };
+
 // ── Constants ────────────────────────────────────────────────
 
 export const TIMEOUT_MS = 10_000;
@@ -98,4 +120,161 @@ export async function detectMode(
 
 	const firstPath = blocks[0]?.match(/^worktree\s+(.+)$/m)?.[1];
 	return firstPath === topLevel ? "branch" : "worktree";
+}
+
+/**
+ * Identify the git hosting provider from the origin remote URL.
+ */
+export function detectProvider(remoteUrl: string | null): Provider {
+	if (!remoteUrl) return "unknown";
+	if (/github\.com[:/]/i.test(remoteUrl)) return "github";
+	if (/gitlab\.[a-z.]+[:/]/i.test(remoteUrl) || /\bgitlab\b/i.test(remoteUrl)) return "gitlab";
+	if (/bitbucket\.org[:/]/i.test(remoteUrl)) return "bitbucket";
+	return "unknown";
+}
+
+function normalizePrState(raw: string): PrState {
+	const v = raw.toLowerCase();
+	if (v === "merged") return "merged";
+	if (v === "closed") return "closed";
+	return "open";
+}
+
+/**
+ * Find an existing PR / MR for the given branch, regardless of state.
+ * Returns null when none exists, the provider is unsupported, or the host
+ * CLI is unavailable. Soft-failure messages are pushed into `warnings` if a
+ * sink is provided.
+ */
+export async function findExistingPr(
+	exec: ExecRunner,
+	provider: Provider,
+	branch: string,
+	signal?: AbortSignal,
+	warnings?: string[],
+): Promise<ExistingPr | null> {
+	if (!branch) return null;
+
+	if (provider === "github") {
+		const out = await tryExec(
+			exec,
+			"gh",
+			[
+				"pr",
+				"list",
+				"--head",
+				branch,
+				"--state",
+				"all",
+				"--json",
+				"number,url,state",
+				"--limit",
+				"1",
+			],
+			signal,
+		);
+		if (out === null) {
+			warnings?.push("gh CLI unavailable or unauthenticated; existingPr left as null");
+			return null;
+		}
+		try {
+			const arr = JSON.parse(out) as Array<{ number: number; url: string; state: string }>;
+			const p = arr[0];
+			if (!p) return null;
+			return { number: p.number, url: p.url, state: normalizePrState(p.state) };
+		} catch {
+			warnings?.push("Failed to parse gh pr list JSON; existingPr left as null");
+			return null;
+		}
+	}
+
+	if (provider === "gitlab") {
+		const out = await tryExec(
+			exec,
+			"glab",
+			["mr", "list", "--source-branch", branch, "--all", "--output", "json"],
+			signal,
+		);
+		if (out === null) {
+			warnings?.push("glab CLI unavailable or unauthenticated; existingPr left as null");
+			return null;
+		}
+		try {
+			const arr = JSON.parse(out) as Array<{ iid: number; web_url: string; state: string }>;
+			const p = arr[0];
+			if (!p) return null;
+			return { number: p.iid, url: p.web_url, state: normalizePrState(p.state) };
+		} catch {
+			warnings?.push("Failed to parse glab mr list JSON; existingPr left as null");
+			return null;
+		}
+	}
+
+	warnings?.push(`Provider ${provider} not supported for PR detection`);
+	return null;
+}
+
+/**
+ * Create a PR on the given provider. Returns the new PR's number and URL on
+ * success, or an error message string on failure. Does NOT detect existing
+ * PRs — callers (e.g. git-pr) decide whether to short-circuit on duplicates.
+ */
+export async function createPr(
+	exec: ExecRunner,
+	provider: Provider,
+	opts: CreatePrOptions,
+	signal?: AbortSignal,
+): Promise<CreatePrResult> {
+	if (provider !== "github" && provider !== "gitlab") {
+		return { ok: false, error: `Provider ${provider} is not supported for PR creation` };
+	}
+	const body = opts.body ?? "";
+	const cli = provider === "github" ? "gh" : "glab";
+	const args =
+		provider === "github"
+			? [
+					"pr",
+					"create",
+					"--base",
+					opts.base,
+					"--head",
+					opts.head,
+					"--title",
+					opts.title,
+					"--body",
+					body,
+					...(opts.draft ? ["--draft"] : []),
+				]
+			: [
+					"mr",
+					"create",
+					"--target-branch",
+					opts.base,
+					"--source-branch",
+					opts.head,
+					"--title",
+					opts.title,
+					"--description",
+					body,
+					...(opts.draft ? ["--draft"] : []),
+					"--yes",
+				];
+
+	try {
+		const r = await exec(cli, args, { signal, timeout: 60_000 });
+		const out = [r.stdout, r.stderr].filter(Boolean).join("\n");
+		if (r.code !== 0 || r.killed) {
+			return { ok: false, error: out.trim() || `${cli} ${args.join(" ")} failed with code ${r.code}` };
+		}
+		const urlMatch = out.match(/https?:\/\/\S+/);
+		if (!urlMatch) {
+			return { ok: false, error: `Could not parse PR URL from CLI output:\n${out}` };
+		}
+		const url = urlMatch[0].replace(/[)\]\s.,]+$/, "");
+		const numberMatch = url.match(/\/(\d+)\/?$/);
+		const number = numberMatch ? parseInt(numberMatch[1] ?? "0", 10) : 0;
+		return { ok: true, number, url };
+	} catch (err) {
+		return { ok: false, error: String((err as Error).message ?? err) };
+	}
 }
