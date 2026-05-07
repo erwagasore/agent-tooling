@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.0] — 2026-05-07
+
+### Features
+
+- Add `git-context` extension exposing a `git_context()` tool — one-call repo introspection (provider, default/current branch, worktree mode, cleanliness, remote, latest PR, soft-failure warnings)
+- Add `git-guard` extension exposing a `git_guard()` tool — declarative repo-state assertions (`requireClean` / `requireRemote` / `requireBranch` / `requireMode`); collects all failures, never short-circuits
+- Add `git-ship` extension exposing a `/ship` slash command — turns the `ship-feature` state machine into deterministic code; covers six states (`default-clean`, `default-dirty`, `no-pr`, `pr-open`, `pr-merged`, `pr-closed`); `/ship status` previews without acting
+
+### Other
+
+- Introduce `SPEC.md` at the repo root documenting the four-layer model (Composite → Workflow → Utility → Extension); retire `docs/architecture.md`
+- Add `pi-extensions/_shared/git-internals.ts` shared helpers and document the `_shared/` directory convention (no `index.ts` → not loaded by pi)
+- Slim the six utility skills (`check-preflight`, `check-worktree`, `cleanup-branch`, `detect-default-branch`, `detect-existing-pr`, `detect-provider`) to ≤ 20 lines each, delegating to the new extension tools
+- `detect-existing-pr` now reports the latest PR for the current branch regardless of state (open / merged / closed)
+- `cleanup-branch` now correctly removes squash-merged branches by falling through to `-D` after confirming the remote head is gone
+- Rewrite `skills/ship-feature/SKILL.md` as a thin human-facing doc pointing at `/ship` as the canonical implementation
+
 ## [0.7.2] — 2026-03-19
 
 ### Fixes
