@@ -18,7 +18,7 @@
   Create `pi-extensions/git-context/` exposing a `git_context()` tool that returns `{ provider, defaultBranch, currentBranch, mode, isClean, hasRemote, existingPr }` in one call. Anchored to SPEC § Extensions / git-context.
   *Done when:* the extension installs into pi, the tool returns the struct against this repo, and behaviour is covered by a fixture-repo test.
 
-- [ ] **`feat(extensions): add git-guard extension`**
+- [x] **`feat(extensions): add git-guard extension`**
   Create `pi-extensions/git-guard/` exposing `git_guard({ requireClean, requireRemote })`, replacing the always-paired `check-preflight` + `check-worktree` calls. Anchored to SPEC § Extensions / git-guard.
   *Done when:* the tool throws structured errors that downstream skills can consume, and behaviour is covered by a fixture-repo test.
 
