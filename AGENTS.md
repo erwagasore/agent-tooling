@@ -63,6 +63,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Orientation
 
+- **Architecture**: see [SPEC.md](SPEC.md) for the four-layer model (Composite → Workflow → Utility → Extension), extension specs, and conventions.
 - **Entry point**: `skills/` — each subdirectory is a self-contained pi skill with a `SKILL.md` and supporting files.
 - **Domain**: reusable pi coding agent extensions and skills, publicly shared under MIT.
 - **History**: see [CHANGELOG.md](CHANGELOG.md) for all release history and decisions.
