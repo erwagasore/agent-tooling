@@ -26,7 +26,7 @@
   Trim `skills/check-preflight/SKILL.md`, `skills/check-worktree/SKILL.md`, `skills/detect-default-branch/SKILL.md`, `skills/detect-existing-pr/SKILL.md`, `skills/detect-provider/SKILL.md`, and `skills/cleanup-branch/SKILL.md` to ≤ 20 lines each, deferring to the extension tools. Anchored to SPEC § Utility layer.
   *Done when:* each of the six SKILL.md files is ≤ 20 lines and references its backing extension tool by name.
 
-- [ ] **`feat(extensions): add git-ship extension`**
+- [x] **`feat(extensions): add git-ship extension`**
   Create `pi-extensions/git-ship/` turning the `ship-feature` state machine into code: detect state (no PR / open PR / merged PR), dispatch the right phase, print status. Shells out to `gh`/`glab` directly until `git-pr` lands in a later cycle. Anchored to SPEC § Composite layer / ship.
   *Done when:* `/ship` runs the three phases end-to-end on this repo without LLM round-trips for mechanical steps, and `skills/ship-feature/SKILL.md` is updated to point at the extension as the canonical implementation.
 
