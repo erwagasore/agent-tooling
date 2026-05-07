@@ -134,29 +134,49 @@ State-machine slash command. Replaces the prose state machine inside `ship-featu
 
 ### `git-pr`
 
-Provider-aware PR creation. Wraps `gh` / `glab`.
+Provider-aware PR creation. Wraps `gh pr create` / `glab mr create`. Re-uses an existing open PR for the same head branch instead of opening a duplicate.
 
 ```ts
-git_pr({ title: string; body?: string; draft?: boolean }): { url: string; number: number }
+git_pr({ title: string; body?: string; draft?: boolean }): {
+  ok: boolean;
+  provider: "github" | "gitlab" | "bitbucket" | "unknown";
+  number?: number;     // present when ok
+  url?: string;        // present when ok
+  reused?: boolean;    // present when ok — true if an existing open PR was returned
+  reason?: string;     // present when !ok
+}
+// isError: true on any failure
 ```
+
+The shape is intentionally flat (rather than a discriminated union) because pi's `TOutput` is inferred from the first return path; a union would force later returns into the narrow first type.
 
 ### `git-release`
 
-Computes next version from the CC log and drafts a changelog stub. The skill polishes prose.
+Reads the latest `v*` tag, walks commits since it, classifies CC types, and either previews or applies a release.
 
 ```
-/release --dry-run   → print bump type, next version, draft changelog
-/release             → tag and push
+/release status              → dry-run: print bump type, next version, draft changelog
+/release                     → apply (uses computed bump from CC log)
+/release patch|minor|major   → apply with explicit bump override
 ```
+
+Apply pipeline: confirm with user → bump `package.json` (if present) → prepend `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes.
+
+The `create-release` skill is the human-facing doc for this command; the extension owns mechanism, the skill owns wording for any prose polish a release needs after the fact.
 
 ### `git-worktree`
 
-Hides the branch-vs-worktree fork from the rest of the system.
+Hides the branch-vs-worktree fork from the rest of the system. Three subcommands:
 
 ```
-/wt new <name>     → git worktree add ../<repo>-<name> -b <name>
-/wt land           → cd repo root, remove worktree, prune
+/wt new <branch>   → create linked worktree at ../<repo>-<sanitized-branch>
+                     on a new branch from default; print a `cd` hint
+/wt land           → from inside a linked worktree, remove and prune;
+                     print a `cd` hint back to the main repo
+/wt list           → print all worktrees in a friendly table (default subcommand)
 ```
+
+Pi runs in one cwd and cannot `cd` for the user — the extension prints an explicit `cd "<path>"` hint after each operation. `/wt land` removes only the working directory; the branch is preserved (use `git branch -d` separately, or let `/ship`'s pr-merged phase handle it via the same shared `removeWorktree` helper).
 
 ### Implementation status
 
@@ -165,9 +185,9 @@ Hides the branch-vs-worktree fork from the rest of the system.
 | `git-context` | implemented |
 | `git-guard` | implemented |
 | `git-ship` | implemented |
-| `git-pr` | deferred (next cycle) |
-| `git-release` | deferred (next cycle) |
-| `git-worktree` | deferred (next cycle) |
+| `git-pr` | implemented |
+| `git-release` | implemented |
+| `git-worktree` | implemented |
 
 The current cycle's task breakdown lives in `docs/plan.md`.
 
