@@ -45,8 +45,9 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/ship-feature/` — ship-feature: push, create PR, and after merge clean up and land back on default branch
+- `skills/stress-test-spec/` — stress-test-spec: stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
-- `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
+- `skills/sync-docs/templates/` — document templates (README, AGENTS, SPEC, REFERENCE, LICENSE, docs/index, CONTRIBUTING)
 
 ## Merge strategy
 
@@ -62,6 +63,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Orientation
 
+- **Architecture**: see [SPEC.md](SPEC.md) for the four-layer model (Composite → Workflow → Utility → Extension), extension specs, and conventions.
 - **Entry point**: `skills/` — each subdirectory is a self-contained pi skill with a `SKILL.md` and supporting files.
 - **Domain**: reusable pi coding agent extensions and skills, publicly shared under MIT.
 - **History**: see [CHANGELOG.md](CHANGELOG.md) for all release history and decisions.
