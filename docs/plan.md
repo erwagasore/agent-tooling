@@ -10,7 +10,7 @@
 
 ## Tasks
 
-- [ ] **`feat(extensions): add git-pr extension`**
+- [x] **`feat(extensions): add git-pr extension`**
   Create `pi-extensions/git-pr/` exposing a `git_pr({ title, body?, draft? })` tool that wraps `gh pr create` / `glab mr create` and returns `{ url, number }`. Detects an existing PR for the head branch first (re-uses it instead of duplicating). Bundles a refactor of `pi-extensions/git-ship/` so its `phaseNoPr` delegates to `git-pr` instead of shelling out to `gh`/`glab` directly. While here, lifts the duplicated PR-list JSON parsing (currently in `pi-extensions/git-context/` and `pi-extensions/git-ship/`) into `pi-extensions/_shared/git-internals.ts`. Anchored to SPEC § Extensions / git-pr (line 135) and § Extensions / git-ship.
   *Done when:* `pi-extensions/git-ship/index.ts` no longer references `gh`/`glab` directly; an end-to-end `/ship` run from `no-pr` state uses `git_pr` for PR creation; PR-list parsing has a single home in `_shared`.
 
