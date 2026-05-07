@@ -26,7 +26,7 @@
   Remove the branch-vs-worktree conditional logic from `skills/create-branch/SKILL.md` and `skills/ship-feature/SKILL.md`. Both skills defer worktree creation/cleanup to `/wt` (or to `git-ship`, which itself uses `git-worktree` helpers). Update `SPEC.md § Conventions / Worktree mode` to point at `/wt` and `docs/index.md` if any anchors changed. Anchored to SPEC § Conventions / Worktree mode and § Workflow / create-branch.
   *Done when:* neither `create-branch` nor `ship-feature` SKILL.md mentions worktree mode in its Rules section; SPEC's Worktree mode block points at `/wt`.
 
-- [ ] **`docs(agents): reconcile AGENTS.md with current state`**
+- [x] **`docs(agents): reconcile AGENTS.md with current state`**
   Update `AGENTS.md` to reflect everything that drifted during and before this cycle. Add the missing repo-map entries: `pi-extensions/git-context/`, `pi-extensions/git-guard/`, `pi-extensions/git-ship/`, `pi-extensions/_shared/`, `pi-extensions/plan-cycle/`, `skills/create-plan/`, `skills/promote-plan/`, and this cycle's new `pi-extensions/git-pr/`, `pi-extensions/git-release/`, `pi-extensions/git-worktree/`. Update the Releases section to reference `/release` (the new slash command from task 2) as the canonical entry point. Verify the Orientation block still aligns with SPEC.md.
   *Done when:* `AGENTS.md` repo map lists every directory under `pi-extensions/` and `skills/`; the Releases section names `/release`; no other section drifts vs. SPEC.
 
