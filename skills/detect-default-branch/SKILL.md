@@ -3,10 +3,11 @@ name: detect-default-branch
 description: Detect the default branch of the current git repository
 ---
 
-Determine the default branch name from the remote and return it.
+Resolve the default branch name for the current repo.
 
 ## Rules
 
-1. **Detect** — run `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` and extract the branch name (strip `refs/remotes/origin/` prefix).
-2. **Fallback** — if the command fails or returns empty, fall back to `main`.
-3. **Return** — use the resolved branch name wherever the calling skill needs it.
+1. **Call** the `git_context` tool.
+2. **Return** `details.defaultBranch` for the calling skill.
+
+Backing extension: `pi-extensions/git-context`. The extension probes `symbolic-ref refs/remotes/origin/HEAD`, falls back to parsing `git remote show origin`, then to local `main`/`master`, and finally defaults to `"main"`.
