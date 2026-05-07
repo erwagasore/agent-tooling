@@ -7,6 +7,8 @@ Abort early if there are uncommitted changes in the working tree.
 
 ## Rules
 
-1. **Check** — run `git status --porcelain`. If output is non-empty, the worktree is dirty.
-2. **Dirty** — list the changed files and abort: "Working tree is dirty. Commit or stash changes before proceeding."
-3. **Clean** — if output is empty, the calling skill may proceed.
+1. **Call** the `git_guard` tool with `{ requireClean: true }`.
+2. **Clean** — if `details.ok === true`, the calling skill may proceed.
+3. **Dirty** — if `isError === true`, abort the calling skill and surface the failure message: the worktree must be committed or stashed before proceeding.
+
+Backing extension: `pi-extensions/git-guard`.
