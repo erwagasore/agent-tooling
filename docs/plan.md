@@ -18,7 +18,7 @@
   Create `pi-extensions/git-release/` exposing a `/release` slash command. `/release status` (or `--dry-run`) reads the latest tag, walks commits since it, classifies them as `fix` / `feat` / `feat!`, computes the next semver, and prints a CC-grouped changelog stub. `/release` additionally bumps `package.json`, prepends to `CHANGELOG.md`, commits as `chore: release vX.Y.Z`, tags annotated, pushes `--follow-tags`, and creates the provider release via `gh`/`glab`. Rewrites `skills/create-release/SKILL.md` as a thin human-facing doc pointing at `/release` (mirrors the `ship-feature` rewrite from the previous cycle). Anchored to SPEC § Extensions / git-release (line 143).
   *Done when:* `/release status` on this repo prints the same shape of output we built by hand for v0.8.0; `skills/create-release/SKILL.md` ≤ ~30 lines and references the extension.
 
-- [ ] **`feat(extensions): add git-worktree extension`**
+- [x] **`feat(extensions): add git-worktree extension`**
   Create `pi-extensions/git-worktree/` exposing three slash commands: `/wt new <name>` creates a `../{repo}-{name}` linked worktree on a new branch and prints the path with a `cd` hint; `/wt land` detects worktree mode via `git_context`, removes the linked worktree from the main repo, prunes, and prints the main-repo path; `/wt list` prints a formatted summary. Documents honestly that the extension cannot `cd` for the user — it can only print the destination path. Anchored to SPEC § Extensions / git-worktree (line 152).
   *Done when:* `/wt new foo` creates a clean linked worktree on this repo, `/wt list` shows it, and `/wt land` removes it cleanly.
 
