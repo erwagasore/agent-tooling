@@ -24,6 +24,7 @@ import {
 	findExistingPr,
 	type GitMode,
 	type Provider,
+	removeWorktree,
 	tryExec,
 } from "../_shared/git-internals.ts";
 
@@ -262,22 +263,18 @@ async function phasePrMerged(
 
 	if (c.mode === "worktree") {
 		const commonDir = await tryExec(exec, "git", ["rev-parse", "--git-common-dir"], signal);
-		if (!commonDir) {
+		const topLevel = await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal);
+		if (!commonDir || !topLevel) {
 			ctx.ui.notify("Failed to resolve main worktree path; aborting cleanup.", "error");
 			return;
 		}
-		const mainPath = commonDir.replace(/\/?\.git\/?$/, "");
-		const topLevel = await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal);
-		const remove = await execLoud(
-			exec,
-			"git",
-			["-C", mainPath, "worktree", "remove", topLevel ?? "."],
-			signal,
-		);
-		if (!remove.ok) {
-			ctx.ui.notify(`git worktree remove failed:\n${remove.out}`, "error");
+		const mainPath = commonDir.replace(/\/?\.git\/?$/, "") || ".";
+		const result = await removeWorktree(exec, mainPath, topLevel, signal);
+		if (!result.ok) {
+			ctx.ui.notify(`git worktree remove failed:\n${result.message}`, "error");
 			return;
 		}
+		if (result.message) console.log(result.message);
 		console.log(`Removed worktree at ${topLevel}`);
 	} else {
 		const checkout = await execLoud(exec, "git", ["checkout", c.defaultBranch], signal);

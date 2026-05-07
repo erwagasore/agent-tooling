@@ -22,7 +22,7 @@ The `git-ship` extension (`pi-extensions/git-ship/`) is the canonical implementa
 | `default-dirty` | on default branch, worktree dirty | Print "create a branch first". |
 | `no-pr` | on feature branch, no existing PR | Show diff + commits, confirm, push, prompt for title (default = last commit subject), auto-derive body, create PR via `gh`/`glab`, print URL. |
 | `pr-open` | on feature branch, PR open | Print URL, exit — wait for merge then run `/ship` again. |
-| `pr-merged` | on feature branch, PR merged | Cleanup branch (auto-detects branch vs worktree mode), `git fetch --prune`, `git pull` default. |
+| `pr-merged` | on feature branch, PR merged | Cleanup the local branch and (if the cwd is a linked worktree) remove and prune it via the shared `removeWorktree` helper that backs `/wt land`; then `git fetch --prune` and `git pull` default. |
 | `pr-closed` | on feature branch, PR closed without merge | Print warning. |
 
 ## Behaviour notes
@@ -35,5 +35,7 @@ The `git-ship` extension (`pi-extensions/git-ship/`) is the canonical implementa
 ## Composes
 
 - `pi-extensions/git-ship` (canonical)
-- `pi-extensions/_shared/git-internals` (state detection)
-- `gh` / `glab` CLIs for PR creation (will move to `git-pr` in a later cycle)
+- `pi-extensions/_shared/git-internals` (state detection, PR detection/creation, worktree removal)
+- `pi-extensions/git-pr` shares the same `createPr` helper for PR creation
+- `pi-extensions/git-worktree` shares the same `removeWorktree` helper for the pr-merged worktree path
+- `gh` / `glab` CLIs are still the underlying transport

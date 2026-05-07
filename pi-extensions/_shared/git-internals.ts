@@ -40,6 +40,11 @@ export type CreatePrResult =
 	| { ok: true; number: number; url: string }
 	| { ok: false; error: string };
 
+export interface RemoveWorktreeResult {
+	ok: boolean;
+	message: string;
+}
+
 // ── Constants ────────────────────────────────────────────────
 
 export const TIMEOUT_MS = 10_000;
@@ -212,6 +217,50 @@ export async function findExistingPr(
 
 	warnings?.push(`Provider ${provider} not supported for PR detection`);
 	return null;
+}
+
+/**
+ * Remove a linked worktree at `worktreePath` from the main repo at
+ * `mainPath`, then prune. Prune failure is informational, not fatal.
+ * Used by both `/wt land` (git-worktree) and `/ship`'s pr-merged phase
+ * (git-ship) so the same code path runs whichever entry point is taken.
+ */
+export async function removeWorktree(
+	exec: ExecRunner,
+	mainPath: string,
+	worktreePath: string,
+	signal?: AbortSignal,
+): Promise<RemoveWorktreeResult> {
+	try {
+		const remove = await exec(
+			"git",
+			["-C", mainPath, "worktree", "remove", worktreePath],
+			{ signal, timeout: TIMEOUT_MS },
+		);
+		const removeOut = [remove.stdout, remove.stderr].filter(Boolean).join("\n").trim();
+		if (remove.code !== 0 || remove.killed) {
+			return {
+				ok: false,
+				message:
+					removeOut ||
+					`git -C ${mainPath} worktree remove ${worktreePath} failed (code ${remove.code})`,
+			};
+		}
+		const prune = await exec(
+			"git",
+			["-C", mainPath, "worktree", "prune"],
+			{ signal, timeout: TIMEOUT_MS },
+		);
+		const pruneOut = [prune.stdout, prune.stderr].filter(Boolean).join("\n").trim();
+		const pruneNote =
+			prune.code !== 0 && pruneOut ? `prune note: ${pruneOut}` : "";
+		return {
+			ok: true,
+			message: [removeOut, pruneNote].filter(Boolean).join("\n"),
+		};
+	} catch (err) {
+		return { ok: false, message: String((err as Error).message ?? err) };
+	}
 }
 
 /**

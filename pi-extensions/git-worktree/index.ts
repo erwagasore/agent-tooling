@@ -20,6 +20,7 @@ import {
 	detectDefaultBranch,
 	detectMode,
 	type ExecRunner,
+	removeWorktree,
 	tryExec,
 } from "../_shared/git-internals.ts";
 
@@ -178,24 +179,15 @@ async function wtLand(
 		return;
 	}
 
-	const remove = await execLoud(
-		exec,
-		"git",
-		["-C", mainPath, "worktree", "remove", topLevel],
-		signal,
-	);
-	if (!remove.ok) {
+	const result = await removeWorktree(exec, mainPath, topLevel, signal);
+	if (!result.ok) {
 		ctx.ui.notify(
-			`git worktree remove failed:\n${remove.out}\n\nIf the worktree has uncommitted changes, commit/stash first or pass --force manually.`,
+			`git worktree remove failed:\n${result.message}\n\nIf the worktree has uncommitted changes, commit/stash first or pass --force manually.`,
 			"error",
 		);
 		return;
 	}
-	const prune = await execLoud(exec, "git", ["-C", mainPath, "worktree", "prune"], signal);
-	if (!prune.ok) {
-		// Non-fatal — removal already succeeded
-		console.log(`Note: worktree prune emitted: ${prune.out}`);
-	}
+	if (result.message) console.log(result.message);
 
 	console.log(`Removed worktree at: ${topLevel}`);
 	console.log(`cd back to main repo:\n  cd "${mainPath}"`);
