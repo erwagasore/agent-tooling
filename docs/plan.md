@@ -14,7 +14,7 @@
   Author `SPEC.md` at the repo root describing the 4-layer skill model (Extension → Utility → Workflow → Composite) and listing all six planned `git-*` extensions with their tool shapes (`git-context`, `git-guard`, `git-ship`, `git-pr`, `git-release`, `git-worktree`). Update `AGENTS.md` repo map to reference `SPEC.md`. Delete `docs/ARCHITECTURE.md`.
   *Done when:* `SPEC.md` exists at the repo root, `AGENTS.md` references it, `docs/ARCHITECTURE.md` is gone.
 
-- [ ] **`feat(extensions): add git-context extension`**
+- [x] **`feat(extensions): add git-context extension`**
   Create `pi-extensions/git-context/` exposing a `git_context()` tool that returns `{ provider, defaultBranch, currentBranch, mode, isClean, hasRemote, existingPr }` in one call. Anchored to SPEC § Extensions / git-context.
   *Done when:* the extension installs into pi, the tool returns the struct against this repo, and behaviour is covered by a fixture-repo test.
 

@@ -247,6 +247,7 @@ docs/
   plan.md                        ← transient cycle plan, promoted into SPEC
 skills/<name>/SKILL.md           ← skill definitions
 pi-extensions/<name>/index.ts    ← extension code
+pi-extensions/_shared/*.ts       ← cross-extension helpers (no index.ts → not loaded by pi)
 ```
 
 Operational rules (commits, releases, merge strategy, definition of done) live in [AGENTS.md](AGENTS.md).
