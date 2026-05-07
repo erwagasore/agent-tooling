@@ -1,8 +1,8 @@
 /**
  * peculiars — witty status messages during agent processing.
  *
- * Shows context-aware quips in the working indicator (TUI) as the
- * agent thinks, reads, edits, and runs commands.
+ * Shows context-aware quips as the agent thinks, reads, edits, and
+ * runs commands.
  *
  * Uses setWorkingMessage to replace the default working indicator text.
  */

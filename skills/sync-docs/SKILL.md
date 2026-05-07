@@ -8,6 +8,38 @@ Optional: CONTRIBUTING.md (only if user requests or repo is clearly open-source 
 
 Templates: `templates/` relative to this file.
 
+## Document hierarchy
+
+Every project gets AGENTS.md. Additional docs are created only when needed:
+
+```
+Every project:
+  └── AGENTS.md (always)
+
+Does the project have complex architecture, conventions, or structure
+that would bloat AGENTS.md past ~100 lines of rules?
+  ├── No  → AGENTS.md is enough
+  └── Yes → + SPEC.md
+
+Does the project have enumerated taxonomies or controlled vocabularies?
+  ├── No  → done
+  └── Yes → + REFERENCE.md
+```
+
+| File | When to create |
+|---|---|
+| AGENTS.md | Always |
+| SPEC.md | Complex architecture, conventions, or structure that would bloat AGENTS.md past ~100 lines |
+| REFERENCE.md | Enumerated taxonomies or controlled vocabularies (lookup tables, category lists, code mappings) |
+| TODO.md | Orthogonal — use when needed, not managed by sync-docs |
+
+### Retired files — migration
+
+ARCHITECTURE.md and CONVENTIONS.md are retired. Their content belongs in SPEC.md.
+
+- If the repo contains an existing **ARCHITECTURE.md** or **CONVENTIONS.md**: show the user a summary of what will be merged, confirm, then fold content into SPEC.md and delete the originals.
+- Never create new ARCHITECTURE.md or CONVENTIONS.md files.
+
 ## Rules
 
 1. Repo root: `git rev-parse --show-toplevel`, fallback CWD.
@@ -21,6 +53,8 @@ Templates: `templates/` relative to this file.
    - If the file exists with 1–3 non-blank lines, show its current content and confirm with the user before overwriting.
    - Populate from templates. Replace placeholders. Strip HTML comments from output.
    - AGENTS.md: fill "Repo map" and "Orientation" per scanning rules below.
+   - SPEC.md: only create when the decision tree calls for it (see above). Populate architecture and conventions sections from repo analysis.
+   - REFERENCE.md: only create when the decision tree calls for it (see above). Populate with discovered taxonomies.
    - README.md: fill "Quickstart" per scanning rules below. "Structure" links to AGENTS.md#repo-map — don't duplicate.
    - LICENSE: if user specifies a licence, generate full standard text. Otherwise use template as-is.
    - docs/index.md: populate per scanning rules below.
@@ -61,7 +95,7 @@ Scan the repo and build setup + usage instructions:
 
 Regenerate the entire link list:
 - Always link: README.md, AGENTS.md, LICENSE, CHANGELOG.md.
-- Conditionally link CONTRIBUTING.md only if the file exists.
+- Conditionally link SPEC.md, REFERENCE.md, CONTRIBUTING.md — only if the file exists.
 - Scan `docs/` for any additional `.md` files and append links for each.
 
 ### Authored sections (never modified)

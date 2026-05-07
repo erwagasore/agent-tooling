@@ -45,8 +45,9 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/ship-feature/` — ship-feature: push, create PR, and after merge clean up and land back on default branch
+- `skills/stress-test-spec/` — stress-test-spec: stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
-- `skills/sync-docs/templates/` — document templates (README, AGENTS, LICENSE, docs/index, CONTRIBUTING)
+- `skills/sync-docs/templates/` — document templates (README, AGENTS, SPEC, REFERENCE, LICENSE, docs/index, CONTRIBUTING)
 
 ## Merge strategy
 
