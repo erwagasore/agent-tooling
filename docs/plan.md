@@ -22,7 +22,7 @@
   Create `pi-extensions/git-worktree/` exposing three slash commands: `/wt new <name>` creates a `../{repo}-{name}` linked worktree on a new branch and prints the path with a `cd` hint; `/wt land` detects worktree mode via `git_context`, removes the linked worktree from the main repo, prunes, and prints the main-repo path; `/wt list` prints a formatted summary. Documents honestly that the extension cannot `cd` for the user — it can only print the destination path. Anchored to SPEC § Extensions / git-worktree (line 152).
   *Done when:* `/wt new foo` creates a clean linked worktree on this repo, `/wt list` shows it, and `/wt land` removes it cleanly.
 
-- [ ] **`refactor(skills): slim create-branch and ship-feature for git-worktree`**
+- [x] **`refactor(skills): slim create-branch and ship-feature for git-worktree`**
   Remove the branch-vs-worktree conditional logic from `skills/create-branch/SKILL.md` and `skills/ship-feature/SKILL.md`. Both skills defer worktree creation/cleanup to `/wt` (or to `git-ship`, which itself uses `git-worktree` helpers). Update `SPEC.md § Conventions / Worktree mode` to point at `/wt` and `docs/index.md` if any anchors changed. Anchored to SPEC § Conventions / Worktree mode and § Workflow / create-branch.
   *Done when:* neither `create-branch` nor `ship-feature` SKILL.md mentions worktree mode in its Rules section; SPEC's Worktree mode block points at `/wt`.
 
