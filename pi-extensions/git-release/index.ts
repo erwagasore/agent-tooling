@@ -250,6 +250,106 @@ async function execLoud(
 	}
 }
 
+interface ReleaseSafetyCheck {
+	ok: boolean;
+	failures: string[];
+	warnings: string[];
+}
+
+async function tagExists(
+	exec: ExecRunner,
+	tag: string,
+	signal?: AbortSignal,
+): Promise<{ local: boolean; remote: boolean; remoteCheckOk: boolean }> {
+	const local =
+		(await tryExec(exec, "git", ["show-ref", "--verify", `refs/tags/${tag}`], signal)) !== null;
+	const remote = await execLoud(exec, "git", ["ls-remote", "--tags", "origin", tag], signal);
+	return { local, remote: remote.ok && !!remote.out.trim(), remoteCheckOk: remote.ok };
+}
+
+async function checkProviderAuth(
+	exec: ExecRunner,
+	provider: Provider,
+	signal?: AbortSignal,
+): Promise<{ ok: boolean; message?: string }> {
+	if (provider === "github") {
+		const auth = await execLoud(exec, "gh", ["auth", "status"], signal);
+		return auth.ok ? { ok: true } : { ok: false, message: auth.out || "gh auth status failed" };
+	}
+	if (provider === "gitlab") {
+		const auth = await execLoud(exec, "glab", ["auth", "status"], signal);
+		return auth.ok ? { ok: true } : { ok: false, message: auth.out || "glab auth status failed" };
+	}
+	return { ok: true };
+}
+
+async function preflightReleaseSafety(
+	exec: ExecRunner,
+	versionStr: string,
+	provider: Provider,
+	hasRemote: boolean,
+	signal?: AbortSignal,
+): Promise<ReleaseSafetyCheck> {
+	const failures: string[] = [];
+	const warnings: string[] = [];
+
+	if (!hasRemote) {
+		failures.push("No `origin` remote is configured; release cannot push tags or publish host notes.");
+	}
+
+	const tags = await tagExists(exec, versionStr, signal);
+	if (tags.local) failures.push(`Local tag ${versionStr} already exists.`);
+	if (tags.remote) failures.push(`Remote tag ${versionStr} already exists on origin.`);
+	if (hasRemote && !tags.remoteCheckOk) {
+		failures.push(`Could not check whether tag ${versionStr} already exists on origin.`);
+	}
+
+	const auth = await checkProviderAuth(exec, provider, signal);
+	if (!auth.ok) {
+		failures.push(
+			`Provider auth check failed for ${provider}: ${auth.message ?? "unknown error"}`,
+		);
+	} else if (provider !== "github" && provider !== "gitlab") {
+		warnings.push(
+			`Provider \`${provider}\` does not support automated release publishing; /release will push the tag but skip host release notes.`,
+		);
+	}
+
+	return { ok: failures.length === 0, failures, warnings };
+}
+
+function formatRecoverySteps(versionStr: string, defaultBranch: string, phase: "commit" | "tag" | "push" | "provider-release"): string {
+	const pushCmd = `git push origin ${defaultBranch} --follow-tags`;
+	if (phase === "commit") {
+		return [
+			"Recovery:",
+			"  - Files may have been modified but no release commit/tag was created.",
+			"  - Inspect with `git status` and `git diff`.",
+			"  - Either commit manually or restore the files before retrying `/release`.",
+		].join("\n");
+	}
+	if (phase === "tag") {
+		return [
+			"Recovery:",
+			"  - A release commit may exist, but the tag was not created.",
+			`  - Create the tag manually: git tag -a ${versionStr} -m ${versionStr}`,
+			`  - Then push: ${pushCmd}`,
+		].join("\n");
+	}
+	if (phase === "push") {
+		return [
+			"Recovery:",
+			"  - Local release commit and tag exist, but were not pushed.",
+			`  - Push manually: ${pushCmd}`,
+		].join("\n");
+	}
+	return [
+		"Recovery:",
+		"  - The tag is pushed, but host release notes were not published.",
+		`  - Create the provider release manually for ${versionStr} using the CHANGELOG section as notes.`,
+	].join("\n");
+}
+
 async function fileExists(path: string): Promise<boolean> {
 	try {
 		await access(path);
@@ -294,6 +394,16 @@ async function prependChangelog(repoRoot: string, section: string): Promise<void
 	await writeFile(path, next);
 }
 
+async function stageReleaseFiles(
+	exec: ExecRunner,
+	bumpedPackageJson: boolean,
+	signal?: AbortSignal,
+): Promise<{ ok: boolean; out: string; files: string[] }> {
+	const files = ["CHANGELOG.md", ...(bumpedPackageJson ? ["package.json"] : [])];
+	const staged = await execLoud(exec, "git", ["add", "--", ...files], signal);
+	return { ...staged, files };
+}
+
 function extractReleaseNotes(changelog: string): string {
 	// Strip the leading `## [X.Y.Z] — DATE` header; keep the rest.
 	return changelog.replace(/^##\s+\[[^\]]+\][^\n]*\n+/, "").trim();
@@ -330,10 +440,16 @@ async function executeRelease(
 	await prependChangelog(repoRoot, plan.changelog);
 	console.log("Prepended CHANGELOG.md");
 
-	// 4. Commit
-	const commit = await execLoud(exec, "git", ["commit", "-am", `chore: release ${versionStr}`], signal);
+	// 4. Stage and commit. Use explicit git add instead of `commit -am` so a
+	// newly-created CHANGELOG.md is included in first-release repos.
+	const stage = await stageReleaseFiles(exec, bumped, signal);
+	if (!stage.ok) {
+		ctx.ui.notify(`git add failed:\n${stage.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`, "error");
+		return;
+	}
+	const commit = await execLoud(exec, "git", ["commit", "-m", `chore: release ${versionStr}`], signal);
 	if (!commit.ok) {
-		ctx.ui.notify(`git commit failed:\n${commit.out}`, "error");
+		ctx.ui.notify(`git commit failed:\n${commit.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`, "error");
 		return;
 	}
 	console.log(commit.out);
@@ -341,7 +457,7 @@ async function executeRelease(
 	// 5. Tag annotated
 	const tag = await execLoud(exec, "git", ["tag", "-a", versionStr, "-m", versionStr], signal);
 	if (!tag.ok) {
-		ctx.ui.notify(`git tag failed:\n${tag.out}`, "error");
+		ctx.ui.notify(`git tag failed:\n${tag.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "tag")}`, "error");
 		return;
 	}
 	console.log(`Tagged ${versionStr}`);
@@ -353,7 +469,7 @@ async function executeRelease(
 	);
 	if (!okPush) {
 		ctx.ui.notify(
-			`Local commit and tag created but not pushed. Push manually:\n  git push origin ${defaultBranch} --follow-tags`,
+			`Local commit and tag created but not pushed.\n\n${formatRecoverySteps(versionStr, defaultBranch, "push")}`,
 			"warning",
 		);
 		return;
@@ -367,7 +483,7 @@ async function executeRelease(
 		signal,
 	);
 	if (!push.ok) {
-		ctx.ui.notify(`git push failed:\n${push.out}`, "error");
+		ctx.ui.notify(`git push failed:\n${push.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "push")}`, "error");
 		return;
 	}
 	console.log(push.out);
@@ -383,7 +499,7 @@ async function executeRelease(
 		);
 		if (!rel.ok) {
 			ctx.ui.notify(
-				`gh release create failed (tag is pushed; release notes not published):\n${rel.out}`,
+				`gh release create failed (tag is pushed; release notes not published):\n${rel.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "provider-release")}`,
 				"warning",
 			);
 		} else {
@@ -398,7 +514,7 @@ async function executeRelease(
 		);
 		if (!rel.ok) {
 			ctx.ui.notify(
-				`glab release create failed (tag is pushed; release notes not published):\n${rel.out}`,
+				`glab release create failed (tag is pushed; release notes not published):\n${rel.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "provider-release")}`,
 				"warning",
 			);
 		} else {
@@ -435,6 +551,7 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 
 			// Read repo state
 			const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
+			const hasRemote = remoteUrl !== null;
 			const provider = detectProvider(remoteUrl);
 			const currentBranch =
 				(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
@@ -472,6 +589,17 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 				return;
 			}
 
+			const versionStr = `v${formatSemver(plan.nextVersion)}`;
+			const safety = await preflightReleaseSafety(exec, versionStr, provider, hasRemote, signal);
+			for (const warning of safety.warnings) ctx.ui.notify(warning, "warning");
+			if (!safety.ok) {
+				ctx.ui.notify(
+					`Release safety checks failed before mutation:\n${safety.failures.map((f) => `  - ${f}`).join("\n")}`,
+					"error",
+				);
+				return;
+			}
+
 			await executeRelease(exec, plan, provider, defaultBranch, repoRoot, ctx, signal);
 		},
 	});
@@ -487,4 +615,9 @@ export {
 	computeBump,
 	buildChangelog,
 	extractReleaseNotes,
+	stageReleaseFiles,
+	tagExists,
+	checkProviderAuth,
+	preflightReleaseSafety,
+	formatRecoverySteps,
 };
