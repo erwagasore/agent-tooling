@@ -50,7 +50,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
 ## Phase 3 — Docs sync and public surface alignment
 
-- [ ] **`feat(skills): teach sync-docs generated command sections`**
+- [x] **`feat(skills): teach sync-docs generated command sections`**
 
   Improve `skills/sync-docs/SKILL.md` so `/sync-docs` owns generated README sections for skills, extensions, slash commands, and provider/support notes. Use stable generated markers so manual prose is preserved while command listings can be refreshed from repo state and skill frontmatter. This anchors to `SPEC.md:216` (`sync-docs`).
 
