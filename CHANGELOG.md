@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.10.0] — 2026-05-08
+
+### Features
+
+- Support multi-manifest releases (#35)
+- Teach sync-docs generated command sections (#37)
+
+### Fixes
+
+- Harden git-release safety checks (#34)
+- Harden git-worktree safety (#36)
+- Sync npm lockfile during release (#40)
+
+### Other
+
+- Plan testing docs sync and safety cycle (#30)
+- Add Vitest verification harness (#31)
+- Cover git-release and shared helpers (#32)
+- Cover git-ship and git-worktree behavior (#33)
+- Sync README and document release privilege (#38)
+- Promote testing docs sync and safety cycle (#39)
+
 ## [0.9.0] — 2026-05-08
 
 ### Features
