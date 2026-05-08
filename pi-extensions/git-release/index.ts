@@ -81,12 +81,19 @@ function applyBump(v: Semver, bump: Bump): Semver {
 
 const COMMIT_RE = /^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/;
 
+// Per Conventional Commits, a BREAKING CHANGE marker is a footer token that
+// MUST start its own line. The previous regex matched anywhere in the body,
+// which incorrectly classified PR descriptions that *mention* the spec
+// (e.g. "`BREAKING CHANGE:`-in-body triggers major") as breaking changes.
+// The multiline `^` anchor restricts the match to a line start.
+const BREAKING_FOOTER_RE = /^BREAKING[- ]CHANGE:/m;
+
 function classifyCommit(record: string): CommitInfo {
 	const [hash = "", subject = "", body = ""] = record.split("\x00");
 	const m = subject.match(COMMIT_RE);
 	if (m) {
 		const [, type = "other", scope, bang, description = subject] = m;
-		const breaking = !!bang || /BREAKING CHANGE:/.test(body);
+		const breaking = !!bang || BREAKING_FOOTER_RE.test(body);
 		return { hash, subject, body, type, scope, breaking, description };
 	}
 	return { hash, subject, body, type: "other", breaking: false, description: subject };
