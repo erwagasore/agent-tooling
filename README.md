@@ -146,7 +146,7 @@ These skills are plain Markdown files following the [Agent Skills standard](http
 
 - **PRs:** GitHub via `gh`; GitLab via `glab`; existing PR detection covers open, merged, and closed states.
 - **Releases:** GitHub via `gh release create`; GitLab via `glab release create`; Bitbucket/unknown providers are detected but do not publish PRs or release notes automatically.
-- **Manifest versions:** `/release` detects the project root, infers ecosystem signals from root marker files, applies high-confidence built-ins (`package.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`), and uses a safe generic fallback for root-level manifest-like files with exactly one unambiguous semver-like version field.
+- **Manifest versions:** `/release` detects the project root, infers ecosystem signals from root marker files, applies high-confidence built-ins (`package.json`, `package-lock.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`), and uses a safe generic fallback for root-level manifest-like files with exactly one unambiguous semver-like version field.
 - **Verification:** local contributors can run `npm run verify` to typecheck and run the Vitest suite.
 <!-- sync-docs:provider-support:end -->
 

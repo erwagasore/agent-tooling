@@ -447,6 +447,43 @@ const MANIFEST_ADAPTERS: ManifestAdapter[] = [
 		},
 	},
 	{
+		language: "JavaScript/TypeScript",
+		name: "package-lock.json",
+		path: "package-lock.json",
+		readVersion(raw) {
+			try {
+				const json = JSON.parse(raw) as { version?: unknown; packages?: { ""?: { version?: unknown } } };
+				return typeof json.packages?.[""]?.version === "string"
+					? json.packages[""].version
+					: typeof json.version === "string"
+						? json.version
+						: null;
+			} catch {
+				return null;
+			}
+		},
+		writeVersion(raw, version) {
+			try {
+				const json = JSON.parse(raw) as Record<string, unknown> & {
+					version?: unknown;
+					packages?: { ""?: { version?: unknown } };
+				};
+				let touched = false;
+				if (typeof json.version === "string") {
+					json.version = version;
+					touched = true;
+				}
+				if (json.packages?.[""] && typeof json.packages[""].version === "string") {
+					json.packages[""].version = version;
+					touched = true;
+				}
+				return touched ? `${JSON.stringify(json, null, 2)}\n` : null;
+			} catch {
+				return null;
+			}
+		},
+	},
+	{
 		language: "Rust",
 		name: "Cargo.toml",
 		path: "Cargo.toml",
