@@ -4,6 +4,7 @@ import gitReleaseExtension, {
 	buildChangelog,
 	classifyCommit,
 	computeBump,
+	extractReleaseNotes,
 	formatSemver,
 	parseSemver,
 } from "../pi-extensions/git-release/index.ts";
@@ -27,10 +28,14 @@ describe("git-release helpers", () => {
 		const hyphenatedFooter = classifyCommit(
 			"a3\x00feat: add new API\x00BREAKING-CHANGE: remove old API",
 		);
+		const markdownTableMention = classifyCommit(
+			"a4\x00feat: document release rules\x00| `feat!:` or `BREAKING CHANGE` in body | major |",
+		);
 
 		expect(realFooter.breaking).toBe(true);
 		expect(hyphenatedFooter.breaking).toBe(true);
 		expect(midLineMention.breaking).toBe(false);
+		expect(markdownTableMention.breaking).toBe(false);
 	});
 
 	it("computes bump from classified commits", () => {
@@ -43,12 +48,13 @@ describe("git-release helpers", () => {
 		expect(computeBump([classifyCommit("b1\x00feat!: break API\x00")])).toBe("major");
 	});
 
-	it("renders grouped changelog sections", () => {
+	it("renders grouped changelog sections and skips release commits", () => {
 		const changelog = buildChangelog(
 			[
 				classifyCommit("f1\x00feat: add git-pr extension\x00"),
 				classifyCommit("x1\x00fix: tighten classifier\x00"),
 				classifyCommit("d1\x00docs: promote cycle\x00"),
+				classifyCommit("c1\x00chore: release v0.9.0\x00"),
 			],
 			{ major: 0, minor: 9, patch: 0 },
 			"2026-05-08",
@@ -60,6 +66,13 @@ describe("git-release helpers", () => {
 		expect(changelog).toContain("### Fixes");
 		expect(changelog).toContain("- Tighten classifier");
 		expect(changelog).toContain("### Other");
+		expect(changelog).not.toContain("Release v0.9.0");
+	});
+
+	it("extracts provider release notes by removing only the version header", () => {
+		const section = "## [0.9.0] — 2026-05-08\n\n### Features\n\n- Add git-pr extension";
+
+		expect(extractReleaseNotes(section)).toBe("### Features\n\n- Add git-pr extension");
 	});
 
 	it("registers the /release command through the committed test harness", () => {
