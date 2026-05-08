@@ -22,7 +22,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
   *Done when:* the classifier false-positive found while dogfooding `v0.9.0` is permanently covered, and shared helper behavior has regression tests.
 
-- [ ] **`test(extensions): cover git-ship and git-worktree behavior`**
+- [x] **`test(extensions): cover git-ship and git-worktree behavior`**
 
   Add tests for `pi-extensions/git-ship/index.ts` state detection and `pi-extensions/git-worktree/index.ts` helper behavior: branch/path sanitisation, worktree-list parsing, and table formatting. This anchors to `SPEC.md:117` (`git-ship`) and `SPEC.md:167` (`git-worktree`).
 
