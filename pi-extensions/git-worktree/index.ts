@@ -14,7 +14,7 @@
  */
 
 import { access } from "node:fs/promises";
-import { basename, resolve } from "node:path";
+import { basename, isAbsolute, resolve } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
 	detectDefaultBranch,
@@ -50,16 +50,52 @@ async function fileExists(path: string): Promise<boolean> {
 	}
 }
 
+function mainPathFromWorktreeList(out: string): string | null {
+	return out.match(/^worktree\s+(.+)$/m)?.[1] ?? null;
+}
+
 async function getMainRepoPath(exec: ExecRunner, signal?: AbortSignal): Promise<string | null> {
+	// `git worktree list --porcelain` always prints the main worktree first.
+	const worktrees = await tryExec(exec, "git", ["worktree", "list", "--porcelain"], signal);
+	const mainFromList = worktrees ? mainPathFromWorktreeList(worktrees) : null;
+	if (mainFromList) return resolve(mainFromList);
+
 	const commonDir = await tryExec(exec, "git", ["rev-parse", "--git-common-dir"], signal);
-	if (!commonDir) return null;
-	// commonDir is typically "<main>/.git" or just ".git" (relative); strip the suffix
+	const topLevel = await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal);
+	if (!commonDir || !topLevel) return null;
+	// commonDir is typically "<main>/.git", "../main/.git", or just ".git".
 	const stripped = commonDir.replace(/\/?\.git\/?$/, "") || ".";
-	return resolve(stripped);
+	return isAbsolute(stripped) ? resolve(stripped) : resolve(topLevel, stripped);
 }
 
 function sanitizeForPath(branch: string): string {
 	return branch.replace(/[/\\]+/g, "-").replace(/[^A-Za-z0-9._-]/g, "-");
+}
+
+async function validateBranchName(
+	exec: ExecRunner,
+	branchName: string,
+	signal?: AbortSignal,
+): Promise<{ ok: boolean; reason?: string }> {
+	if (!branchName) return { ok: false, reason: "branch name is empty" };
+	if (branchName.trim() !== branchName) return { ok: false, reason: "branch name has leading or trailing whitespace" };
+	if (/\s/.test(branchName)) return { ok: false, reason: "branch name cannot contain whitespace" };
+	const checked = await execLoud(exec, "git", ["check-ref-format", "--branch", branchName], signal);
+	if (!checked.ok) return { ok: false, reason: checked.out || "git check-ref-format rejected the branch name" };
+	return { ok: true };
+}
+
+async function fetchOriginPrune(
+	exec: ExecRunner,
+	mainPath: string,
+	signal?: AbortSignal,
+): Promise<{ ok: boolean; out: string }> {
+	return execLoud(exec, "git", ["-C", mainPath, "fetch", "origin", "--prune"], signal);
+}
+
+async function isWorktreeClean(exec: ExecRunner, signal?: AbortSignal): Promise<boolean | null> {
+	const status = await tryExec(exec, "git", ["status", "--porcelain"], signal);
+	return status === null ? null : status === "";
 }
 
 // ── /wt new ──────────────────────────────────────────────────
@@ -77,8 +113,12 @@ async function wtNew(
 		);
 		return;
 	}
-	if (/\s/.test(branchName)) {
-		ctx.ui.notify(`Branch name cannot contain whitespace: \`${branchName}\``, "error");
+	const branchValidation = await validateBranchName(exec, branchName, signal);
+	if (!branchValidation.ok) {
+		ctx.ui.notify(
+			`Invalid branch name \`${branchName}\`: ${branchValidation.reason}. Pick a valid git branch name, e.g. \`feat/my-change\` or \`wip/2026-05-08\`.`,
+			"error",
+		);
 		return;
 	}
 
@@ -110,6 +150,16 @@ async function wtNew(
 		);
 		return;
 	}
+
+	const fetched = await fetchOriginPrune(exec, mainPath, signal);
+	if (!fetched.ok) {
+		ctx.ui.notify(
+			`git fetch origin --prune failed before creating the worktree:\n${fetched.out}\n\nWorktree creation stopped so the new branch is not based on stale or unknown remote state. Fix remote/auth/network, then retry \`/wt new ${branchName}\`.`,
+			"error",
+		);
+		return;
+	}
+	if (fetched.out) console.log(fetched.out);
 
 	const defaultBranch = await detectDefaultBranch(exec, signal);
 
@@ -167,6 +217,21 @@ async function wtLand(
 	const mainPath = await getMainRepoPath(exec, signal);
 	if (!topLevel || !mainPath) {
 		ctx.ui.notify("Failed to resolve worktree paths; aborting.", "error");
+		return;
+	}
+	if (resolve(topLevel) === resolve(mainPath)) {
+		ctx.ui.notify("Resolved worktree path is the main repo; refusing to remove it.", "error");
+		return;
+	}
+
+	const clean = await isWorktreeClean(exec, signal);
+	if (clean !== true) {
+		ctx.ui.notify(
+			clean === false
+				? "Worktree has uncommitted changes. Commit, stash, or discard them before `/wt land`; refusing to remove dirty worktree."
+				: "Could not determine worktree cleanliness; refusing `/wt land` before removal.",
+			"error",
+		);
 		return;
 	}
 
@@ -296,4 +361,13 @@ export default function gitWorktreeExtension(pi: ExtensionAPI) {
 
 // ── Re-exports for tests ─────────────────────────────────────
 
-export { sanitizeForPath, parseWorktreeList, formatWorktreeTable };
+export {
+	mainPathFromWorktreeList,
+	getMainRepoPath,
+	sanitizeForPath,
+	validateBranchName,
+	fetchOriginPrune,
+	isWorktreeClean,
+	parseWorktreeList,
+	formatWorktreeTable,
+};
