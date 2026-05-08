@@ -56,7 +56,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
   *Done when:* `/sync-docs` can refresh README command lists from repo state/frontmatter without clobbering manual prose.
 
-- [ ] **`docs(repo): sync README and document release privilege`**
+- [x] **`docs(repo): sync README and document release privilege`**
 
   Run or apply the improved `/sync-docs` output to update `README.md` to current reality: list all `git-*` extensions and slash commands, remove stale `/create-branch worktree` and pre-release claims, and clarify `detect-existing-pr` behavior. Also update `AGENTS.md` to document `/release` as the explicit direct-to-default exception after user confirmation. This anchors to `SPEC.md:239` (Conventions) and the workflow/releases rules in `AGENTS.md`.
 
