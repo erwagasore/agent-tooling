@@ -23,6 +23,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - Semantic versioning.
 - Versions derived from Conventional Commits.
 - Release performed locally via `/release` (no CI required); the `create-release` skill is the human-facing doc for this command.
+- `/release` is the explicit direct-to-default exception: after user confirmation it may commit `chore: release vX.Y.Z`, create tag `vX.Y.Z`, and push the default branch with `--follow-tags`.
 - Manifest (if present) is source of truth.
 - Tags: vX.Y.Z
 
