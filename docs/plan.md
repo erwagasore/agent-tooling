@@ -10,7 +10,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
 ## Phase 1 — Verification foundation
 
-- [ ] **`chore(test): add Vitest verification harness`**
+- [x] **`chore(test): add Vitest verification harness`**
 
   Add committed dev tooling for extension verification: `typescript`, `vitest`, `@types/node`, `tsconfig.json`, test scripts, and a lightweight pi-extension harness for invoking tools/commands without relying on ad-hoc `/tmp` smoke files. This anchors to the repository file-layout convention in `SPEC.md:268` and keeps verification local to the repo.
 
