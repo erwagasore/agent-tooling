@@ -160,7 +160,7 @@ Reads the latest `v*` tag, walks commits since it, classifies CC types, and eith
 /release patch|minor|major   → apply with explicit bump override
 ```
 
-Apply pipeline: confirm with user → detect the project root and infer language/ecosystem signals from root marker files → bump high-confidence built-in manifests (`package.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`) plus any root manifest-like file with exactly one unambiguous semver-like version field (for example Elixir `mix.exs`) → prepend `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes.
+Apply pipeline: preflight before mutation (default branch, clean tree, origin present, tag not present locally/remotely, provider auth available for GitHub/GitLab) → confirm with user → detect the project root and infer language/ecosystem signals from root marker files → bump high-confidence built-in manifests (`package.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`) plus any root manifest-like file with exactly one unambiguous semver-like version field (for example Elixir `mix.exs`) → skip ambiguous manifests instead of guessing → prepend `CHANGELOG.md` → explicitly `git add` changed manifests plus `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes. Partial failures print recovery steps for the commit, tag, push, or provider-release phase.
 
 The `create-release` skill is the human-facing doc for this command; the extension owns mechanism, the skill owns wording for any prose polish a release needs after the fact.
 
@@ -226,15 +226,15 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 | `bootstrap-project` | init-repo → sync-docs → create-branch | Day one of a new project |
 | `ship-feature` | create-pr → cleanup-branch (state machine) | Ready to deliver |
 
-`ship-feature` is a state machine — run repeatedly:
+`ship-feature` is a human-facing doc for the `/ship` state machine — run repeatedly:
 
 ```
-/ship-feature  →  No PR? Push and create one.
-/ship-feature  →  PR open? Print URL, wait for merge.
-/ship-feature  →  PR merged? Clean up and land on default.
+/ship  →  No PR? Push and create one.
+/ship  →  PR open? Print URL, wait for merge.
+/ship  →  PR merged? Clean up and land on default.
 ```
 
-Once `git-ship` lands, `ship-feature`'s SKILL.md becomes the human-facing doc and the extension is the canonical implementation.
+`git-ship` is the canonical implementation; the skill keeps the prose workflow discoverable.
 
 ## Conventions
 
@@ -251,6 +251,18 @@ When in doubt:
 - Skills: `<verb>-<noun>` (e.g. `create-branch`, `detect-provider`).
 - Extensions: every git-related extension carries the `git-` prefix (e.g. `git-context`, `git-ship`).
 - Branches: `{type}/{short-description}` — lowercase, hyphens. `wip/{YYYY-MM-DD}` for ad-hoc work.
+
+### Verification
+
+Local verification is part of the repo contract. TypeScript and Vitest are the baseline for deterministic extension behavior.
+
+```
+npm run typecheck   → tsc --noEmit
+npm test            → vitest run
+npm run verify      → typecheck + tests
+```
+
+Tests live under `tests/` and should prefer pure helper coverage or mock pi-extension harnesses over live remotes. Any change to extension behavior should add or update tests in the same PR.
 
 ### Worktree mode
 
@@ -273,9 +285,13 @@ AGENTS.md                        ← operational rules + repo map
 README.md                        ← user-facing intro
 CHANGELOG.md                     ← release history
 CONTRIBUTING.md                  ← contributor guide
+package.json                     ← pi package metadata + local verification scripts
+package-lock.json                ← locked dev/runtime dependency graph
+tsconfig.json                    ← TypeScript verification config
 docs/
   index.md                       ← docs landing page
   plan.md                        ← transient cycle plan, promoted into SPEC
+tests/                           ← Vitest coverage for deterministic extension behavior
 skills/<name>/SKILL.md           ← skill definitions
 pi-extensions/<name>/index.ts    ← extension code
 pi-extensions/_shared/*.ts       ← cross-extension helpers (no index.ts → not loaded by pi)
