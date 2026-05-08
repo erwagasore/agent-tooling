@@ -29,7 +29,7 @@ The `git-release` extension (`pi-extensions/git-release/`) is the canonical impl
 
 ## Notes
 
-- **Manifest support** is adaptive: `/release` detects the project root, infers ecosystems from root marker files, applies high-confidence built-ins, then uses a safe generic fallback for root-level manifest-like files only when exactly one semver-like version field is found. Ambiguous files are left untouched.
+- **Manifest support** is adaptive: `/release` detects the project root, infers ecosystems from root marker files, applies high-confidence built-ins (including npm lockfile synchronization), then uses a safe generic fallback for root-level manifest-like files only when exactly one semver-like version field is found. Ambiguous files are left untouched.
 - **Pre-releases** (`-alpha.1`, `-rc.1`, …) are not yet supported via the slash command. Tag manually for those, or extend `applyBump`.
 - **Changelog wording**: the auto-generated bullets strip the CC type prefix and capitalise the description. Edit `CHANGELOG.md` after the run if you want richer prose; commit the polish as a follow-up `docs(changelog)` PR.
 

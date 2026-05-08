@@ -132,6 +132,10 @@ describe("git-release helpers", () => {
 	it("detects and bumps manifests by language ecosystem", async () => {
 		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
 		await writeFile(join(repo, "package.json"), JSON.stringify({ name: "demo", version: "0.1.0" }, null, 2) + "\n");
+		await writeFile(
+			join(repo, "package-lock.json"),
+			JSON.stringify({ name: "demo", version: "0.1.0", packages: { "": { name: "demo", version: "0.1.0" } } }, null, 2) + "\n",
+		);
 		await writeFile(join(repo, "Cargo.toml"), "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n");
 		await writeFile(join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\nversion = \"0.1.0\"\n");
 		await writeFile(join(repo, "build.zig.zon"), ".{\n    .name = .demo,\n    .version = \"0.1.0\",\n}\n");
@@ -141,12 +145,17 @@ describe("git-release helpers", () => {
 
 		expect(results).toEqual([
 			{ language: "JavaScript/TypeScript", name: "package.json", path: "package.json", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{ language: "JavaScript/TypeScript", name: "package-lock.json", path: "package-lock.json", versionBefore: "0.1.0", updated: true, reason: undefined },
 			{ language: "Rust", name: "Cargo.toml", path: "Cargo.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
 			{ language: "Python", name: "pyproject.toml", path: "pyproject.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
 			{ language: "Zig", name: "build.zig.zon", path: "build.zig.zon", versionBefore: "0.1.0", updated: true, reason: undefined },
 			{ language: "Elixir", name: "mix.exs", path: "mix.exs", versionBefore: "0.1.0", updated: true, reason: undefined },
 		]);
 		expect(JSON.parse(await readFile(join(repo, "package.json"), "utf8"))).toMatchObject({ version: "0.2.0" });
+		expect(JSON.parse(await readFile(join(repo, "package-lock.json"), "utf8"))).toMatchObject({
+			version: "0.2.0",
+			packages: { "": { version: "0.2.0" } },
+		});
 		expect(await readFile(join(repo, "Cargo.toml"), "utf8")).toContain("version = \"0.2.0\"");
 		expect(await readFile(join(repo, "pyproject.toml"), "utf8")).toContain("version = \"0.2.0\"");
 		expect(await readFile(join(repo, "build.zig.zon"), "utf8")).toContain(".version = \"0.2.0\"");
