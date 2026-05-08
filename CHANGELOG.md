@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.0] — 2026-05-08
+
+### Features
+
+- Add git-pr extension (#23)
+- Add git-release extension (#24)
+- Add git-worktree extension (#25)
+
+### Fixes
+
+- Tighten git-release BREAKING CHANGE classifier (#29)
+
+### Other
+
+- Slim create-branch and ship-feature for git-worktree (#26)
+- Reconcile AGENTS.md with current state (#27)
+- Promote deferred-extensions cycle (#28)
+
 ## [0.8.0] — 2026-05-07
 
 ### Features
