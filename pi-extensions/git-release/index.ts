@@ -12,7 +12,8 @@
  * Extensions / git-release.
  */
 
-import { readFile, writeFile, access } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { readFile, writeFile, access, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
@@ -52,6 +53,35 @@ interface ReleasePlan {
 	commits: CommitInfo[];
 	changelog: string;
 	date: string;
+}
+
+interface ManifestAdapter {
+	language: string;
+	name: string;
+	path: string;
+	readVersion(raw: string): string | null;
+	writeVersion(raw: string, version: string): string | null;
+}
+
+interface ManifestBumpResult {
+	language: string;
+	name: string;
+	path: string;
+	versionBefore: string | null;
+	updated: boolean;
+	reason?: string;
+}
+
+interface ProjectProfile {
+	root: string;
+	ecosystems: string[];
+	files: string[];
+}
+
+interface EcosystemSignal {
+	language: string;
+	files?: string[];
+	patterns?: RegExp[];
 }
 
 // ── Semver helpers ───────────────────────────────────────────
@@ -359,17 +389,263 @@ async function fileExists(path: string): Promise<boolean> {
 	}
 }
 
-async function bumpPackageJson(repoRoot: string, next: Semver): Promise<boolean> {
-	const path = resolve(repoRoot, "package.json");
-	if (!(await fileExists(path))) return false;
-	const raw = await readFile(path, "utf8");
-	const updated = raw.replace(
-		/"version"\s*:\s*"[^"]+"/,
-		`"version": "${formatSemver(next)}"`,
-	);
-	if (updated === raw) return false;
-	await writeFile(path, updated);
-	return true;
+const TOML_VERSION_ASSIGNMENT_RE = /^(\s*version\s*=\s*")[^"]+(")/m;
+const ZIG_ZON_VERSION_ASSIGNMENT_RE = /^(\s*\.version\s*=\s*")[^"]+(")/m;
+const SEMVER_PATTERN = String.raw`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`;
+const LOCK_OR_GENERATED_MANIFESTS = new Set([
+	"package-lock.json",
+	"npm-shrinkwrap.json",
+	"pnpm-lock.yaml",
+	"yarn.lock",
+	"bun.lockb",
+	"Cargo.lock",
+	"poetry.lock",
+	"uv.lock",
+	"mix.lock",
+	"composer.lock",
+	"go.sum",
+]);
+
+const ECOSYSTEM_SIGNALS: EcosystemSignal[] = [
+	{ language: "JavaScript/TypeScript", files: ["package.json"] },
+	{ language: "Rust", files: ["Cargo.toml"] },
+	{ language: "Python", files: ["pyproject.toml"] },
+	{ language: "Zig", files: ["build.zig.zon"] },
+	{ language: "Elixir", files: ["mix.exs"] },
+	{ language: "Gleam", files: ["gleam.toml"] },
+	{ language: "Go", files: ["go.mod"] },
+	{ language: "PHP", files: ["composer.json"] },
+	{ language: "Ruby", patterns: [/\.gemspec$/] },
+	{ language: ".NET", patterns: [/\.(csproj|fsproj|vbproj)$/] },
+	{ language: "JVM", files: ["pom.xml", "build.gradle", "build.gradle.kts", "gradle.properties"] },
+	{ language: "Crystal", files: ["shard.yml"] },
+	{ language: "Nim", patterns: [/\.nimble$/] },
+];
+
+const MANIFEST_ADAPTERS: ManifestAdapter[] = [
+	{
+		language: "JavaScript/TypeScript",
+		name: "package.json",
+		path: "package.json",
+		readVersion(raw) {
+			try {
+				const json = JSON.parse(raw) as { version?: unknown };
+				return typeof json.version === "string" ? json.version : null;
+			} catch {
+				return null;
+			}
+		},
+		writeVersion(raw, version) {
+			try {
+				const json = JSON.parse(raw) as Record<string, unknown>;
+				if (typeof json.version !== "string") return null;
+				json.version = version;
+				return `${JSON.stringify(json, null, 2)}\n`;
+			} catch {
+				return null;
+			}
+		},
+	},
+	{
+		language: "Rust",
+		name: "Cargo.toml",
+		path: "Cargo.toml",
+		readVersion(raw) {
+			const match = raw.match(TOML_VERSION_ASSIGNMENT_RE);
+			return match?.[0].match(/"([^"]+)"/)?.[1] ?? null;
+		},
+		writeVersion(raw, version) {
+			if (!TOML_VERSION_ASSIGNMENT_RE.test(raw)) return null;
+			return raw.replace(TOML_VERSION_ASSIGNMENT_RE, `$1${version}$2`);
+		},
+	},
+	{
+		language: "Python",
+		name: "pyproject.toml",
+		path: "pyproject.toml",
+		readVersion(raw) {
+			const match = raw.match(TOML_VERSION_ASSIGNMENT_RE);
+			return match?.[0].match(/"([^"]+)"/)?.[1] ?? null;
+		},
+		writeVersion(raw, version) {
+			if (!TOML_VERSION_ASSIGNMENT_RE.test(raw)) return null;
+			return raw.replace(TOML_VERSION_ASSIGNMENT_RE, `$1${version}$2`);
+		},
+	},
+	{
+		language: "Zig",
+		name: "build.zig.zon",
+		path: "build.zig.zon",
+		readVersion(raw) {
+			const match = raw.match(ZIG_ZON_VERSION_ASSIGNMENT_RE);
+			return match?.[0].match(/"([^"]+)"/)?.[1] ?? null;
+		},
+		writeVersion(raw, version) {
+			if (!ZIG_ZON_VERSION_ASSIGNMENT_RE.test(raw)) return null;
+			return raw.replace(ZIG_ZON_VERSION_ASSIGNMENT_RE, `$1${version}$2`);
+		},
+	},
+];
+
+interface GenericVersionPattern {
+	language: string;
+	file: RegExp;
+	version: RegExp;
+}
+
+const GENERIC_VERSION_PATTERNS: GenericVersionPattern[] = [
+	{
+		language: "Generic JSON",
+		file: /\.json$/i,
+		version: new RegExp(`("version"\\s*:\\s*")(${SEMVER_PATTERN})(")`, "gm"),
+	},
+	{
+		language: "Generic TOML",
+		file: /\.(toml|gleam)$/i,
+		version: new RegExp(`(^\\s*version\\s*=\\s*["'])(${SEMVER_PATTERN})(["']\\s*$)`, "gm"),
+	},
+	{
+		language: "Generic ZON",
+		file: /\.zon$/i,
+		version: new RegExp(`(^\\s*\\.version\\s*=\\s*["'])(${SEMVER_PATTERN})(["']\\s*,?\\s*$)`, "gm"),
+	},
+	{
+		language: "Generic YAML",
+		file: /\.ya?ml$/i,
+		version: new RegExp(`(^\\s*version\\s*:\\s*["']?)(${SEMVER_PATTERN})(["']?\\s*$)`, "gm"),
+	},
+	{
+		language: "Generic XML",
+		file: /\.(xml|csproj|fsproj|vbproj)$/i,
+		version: new RegExp(`(<Version>)(${SEMVER_PATTERN})(</Version>)`, "gm"),
+	},
+	{
+		language: "Generic keyword manifest",
+		file: /\.(exs|ex|rb|cr|nim)$/i,
+		version: new RegExp(`(\\bversion\\s*:\\s*["'])(${SEMVER_PATTERN})(["'])`, "gm"),
+	},
+];
+
+function matchUniqueVersion(raw: string, pattern: RegExp): RegExpMatchArray | null {
+	pattern.lastIndex = 0;
+	const matches = Array.from(raw.matchAll(pattern));
+	return matches.length === 1 ? matches[0] ?? null : null;
+}
+
+function createGenericManifestAdapter(
+	path: string,
+	raw: string,
+	languageHint?: string,
+): ManifestAdapter | null {
+	for (const pattern of GENERIC_VERSION_PATTERNS) {
+		if (!pattern.file.test(path)) continue;
+		if (!matchUniqueVersion(raw, pattern.version)) continue;
+		return {
+			language: languageHint ?? pattern.language,
+			name: path,
+			path,
+			readVersion(candidateRaw) {
+				const match = matchUniqueVersion(candidateRaw, pattern.version);
+				return match?.[2] ?? null;
+			},
+			writeVersion(candidateRaw, version) {
+				if (!matchUniqueVersion(candidateRaw, pattern.version)) return null;
+				return candidateRaw.replace(pattern.version, `$1${version}$3`);
+			},
+		};
+	}
+	return null;
+}
+
+async function readRootEntries(repoRoot: string): Promise<Dirent[]> {
+	try {
+		return await readdir(repoRoot, { withFileTypes: true });
+	} catch {
+		return [];
+	}
+}
+
+function ecosystemForPath(path: string): string | undefined {
+	for (const signal of ECOSYSTEM_SIGNALS) {
+		if (signal.files?.includes(path)) return signal.language;
+		if (signal.patterns?.some((p) => p.test(path))) return signal.language;
+	}
+	return undefined;
+}
+
+async function detectProjectProfile(repoRoot: string): Promise<ProjectProfile> {
+	const entries = await readRootEntries(repoRoot);
+	const files = entries.filter((e) => e.isFile()).map((e) => e.name).sort();
+	const ecosystems = Array.from(
+		new Set(files.map((f) => ecosystemForPath(f)).filter((v): v is string => !!v)),
+	).sort();
+	return { root: repoRoot, ecosystems, files };
+}
+
+async function detectManifestAdapters(repoRoot: string): Promise<ManifestAdapter[]> {
+	const adapters = [...MANIFEST_ADAPTERS];
+	const knownPaths = new Set(adapters.map((a) => a.path));
+	const profile = await detectProjectProfile(repoRoot);
+
+	for (const path of profile.files) {
+		if (knownPaths.has(path)) continue;
+		if (LOCK_OR_GENERATED_MANIFESTS.has(path)) continue;
+		if (!GENERIC_VERSION_PATTERNS.some((p) => p.file.test(path))) continue;
+		const raw = await readFile(resolve(repoRoot, path), "utf8");
+		const generic = createGenericManifestAdapter(path, raw, ecosystemForPath(path));
+		if (generic) adapters.push(generic);
+	}
+	return adapters;
+}
+
+async function bumpManifests(repoRoot: string, next: Semver): Promise<ManifestBumpResult[]> {
+	const version = formatSemver(next);
+	const results: ManifestBumpResult[] = [];
+	const adapters = await detectManifestAdapters(repoRoot);
+
+	for (const adapter of adapters) {
+		const fullPath = resolve(repoRoot, adapter.path);
+		if (!(await fileExists(fullPath))) continue;
+
+		const raw = await readFile(fullPath, "utf8");
+		const versionBefore = adapter.readVersion(raw);
+		const updated = adapter.writeVersion(raw, version);
+		if (updated === null) {
+			results.push({
+				language: adapter.language,
+				name: adapter.name,
+				path: adapter.path,
+				versionBefore,
+				updated: false,
+				reason: "no writable version field found",
+			});
+			continue;
+		}
+
+		if (updated !== raw) await writeFile(fullPath, updated);
+		results.push({
+			language: adapter.language,
+			name: adapter.name,
+			path: adapter.path,
+			versionBefore,
+			updated: updated !== raw,
+			reason: updated === raw ? "already at target version" : undefined,
+		});
+	}
+
+	return results;
+}
+
+function formatManifestBumpSummary(results: ManifestBumpResult[], next: Semver): string[] {
+	const version = formatSemver(next);
+	if (results.length === 0) return ["No supported manifests found; skipping manifest bump."];
+	return results.map((r) => {
+		const label = `${r.language} manifest ${r.path}`;
+		if (r.updated) {
+			return `Bumped ${label}${r.versionBefore ? ` ${r.versionBefore}` : ""} → ${version}`;
+		}
+		return `Skipped ${label}: ${r.reason ?? "not changed"}.`;
+	});
 }
 
 async function prependChangelog(repoRoot: string, section: string): Promise<void> {
@@ -396,10 +672,10 @@ async function prependChangelog(repoRoot: string, section: string): Promise<void
 
 async function stageReleaseFiles(
 	exec: ExecRunner,
-	bumpedPackageJson: boolean,
+	manifestPaths: string[],
 	signal?: AbortSignal,
 ): Promise<{ ok: boolean; out: string; files: string[] }> {
-	const files = ["CHANGELOG.md", ...(bumpedPackageJson ? ["package.json"] : [])];
+	const files = ["CHANGELOG.md", ...manifestPaths];
 	const staged = await execLoud(exec, "git", ["add", "--", ...files], signal);
 	return { ...staged, files };
 }
@@ -425,16 +701,18 @@ async function executeRelease(
 	// 1. Confirm
 	const okRelease = await ctx.ui.confirm(
 		`Release ${versionStr}?`,
-		`Will bump package.json, prepend CHANGELOG.md, commit \`chore: release ${versionStr}\`, tag annotated, and prepare to push.`,
+		`Will bump supported manifests, prepend CHANGELOG.md, commit \`chore: release ${versionStr}\`, tag annotated, and prepare to push.`,
 	);
 	if (!okRelease) {
 		ctx.ui.notify("Release cancelled.", "info");
 		return;
 	}
 
-	// 2. Bump manifest
-	const bumped = await bumpPackageJson(repoRoot, plan.nextVersion);
-	console.log(bumped ? `Bumped package.json → ${formatSemver(plan.nextVersion)}` : "No package.json found; skipping manifest bump.");
+	// 2. Bump supported manifests
+	const manifestResults = await bumpManifests(repoRoot, plan.nextVersion);
+	for (const line of formatManifestBumpSummary(manifestResults, plan.nextVersion)) {
+		console.log(line);
+	}
 
 	// 3. Prepend changelog
 	await prependChangelog(repoRoot, plan.changelog);
@@ -442,7 +720,11 @@ async function executeRelease(
 
 	// 4. Stage and commit. Use explicit git add instead of `commit -am` so a
 	// newly-created CHANGELOG.md is included in first-release repos.
-	const stage = await stageReleaseFiles(exec, bumped, signal);
+	const stage = await stageReleaseFiles(
+		exec,
+		manifestResults.filter((r) => r.updated).map((r) => r.path),
+		signal,
+	);
 	if (!stage.ok) {
 		ctx.ui.notify(`git add failed:\n${stage.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`, "error");
 		return;
@@ -615,6 +897,11 @@ export {
 	computeBump,
 	buildChangelog,
 	extractReleaseNotes,
+	bumpManifests,
+	formatManifestBumpSummary,
+	createGenericManifestAdapter,
+	detectProjectProfile,
+	detectManifestAdapters,
 	stageReleaseFiles,
 	tagExists,
 	checkProviderAuth,

@@ -30,7 +30,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
 ## Phase 2 — Release and worktree safety
 
-- [ ] **`fix(extensions): harden git-release safety checks`**
+- [x] **`fix(extensions): harden git-release safety checks`**
 
   Make `/release` safer in `pi-extensions/git-release/index.ts`: use explicit `git add` instead of `git commit -am`, preflight existing local/remote tags, surface provider auth status before mutation where possible, and print clear recovery steps for partial failures. This anchors to `SPEC.md:153` (`git-release`) and preserves the documented direct local release pipeline.
 

@@ -160,7 +160,7 @@ Reads the latest `v*` tag, walks commits since it, classifies CC types, and eith
 /release patch|minor|major   → apply with explicit bump override
 ```
 
-Apply pipeline: confirm with user → bump `package.json` (if present) → prepend `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes.
+Apply pipeline: confirm with user → detect the project root and infer language/ecosystem signals from root marker files → bump high-confidence built-in manifests (`package.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`) plus any root manifest-like file with exactly one unambiguous semver-like version field (for example Elixir `mix.exs`) → prepend `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes.
 
 The `create-release` skill is the human-facing doc for this command; the extension owns mechanism, the skill owns wording for any prose polish a release needs after the fact.
 

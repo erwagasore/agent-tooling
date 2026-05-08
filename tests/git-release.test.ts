@@ -1,15 +1,21 @@
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import gitReleaseExtension, {
 	applyBump,
 	buildChangelog,
+	bumpManifests,
 	checkProviderAuth,
 	classifyCommit,
 	computeBump,
 	extractReleaseNotes,
+	formatManifestBumpSummary,
 	formatRecoverySteps,
 	formatSemver,
 	parseSemver,
 	preflightReleaseSafety,
+	detectProjectProfile,
 	stageReleaseFiles,
 	tagExists,
 } from "../pi-extensions/git-release/index.ts";
@@ -100,7 +106,7 @@ describe("git-release helpers", () => {
 			return { stdout: "" };
 		});
 
-		await expect(stageReleaseFiles(exec, false)).resolves.toEqual({
+		await expect(stageReleaseFiles(exec, [])).resolves.toEqual({
 			ok: true,
 			out: "",
 			files: ["CHANGELOG.md"],
@@ -108,19 +114,120 @@ describe("git-release helpers", () => {
 		expect(calls).toEqual([["git", "add", "--", "CHANGELOG.md"]]);
 	});
 
-	it("stages package.json when the manifest was bumped", async () => {
+	it("stages all bumped manifests", async () => {
 		const calls: string[][] = [];
 		const exec = execFrom((cmd, args) => {
 			calls.push([cmd, ...args]);
 			return { stdout: "" };
 		});
 
-		await expect(stageReleaseFiles(exec, true)).resolves.toEqual({
+		await expect(stageReleaseFiles(exec, ["package.json", "Cargo.toml", "pyproject.toml"])).resolves.toEqual({
 			ok: true,
 			out: "",
-			files: ["CHANGELOG.md", "package.json"],
+			files: ["CHANGELOG.md", "package.json", "Cargo.toml", "pyproject.toml"],
 		});
-		expect(calls).toEqual([["git", "add", "--", "CHANGELOG.md", "package.json"]]);
+		expect(calls).toEqual([["git", "add", "--", "CHANGELOG.md", "package.json", "Cargo.toml", "pyproject.toml"]]);
+	});
+
+	it("detects and bumps manifests by language ecosystem", async () => {
+		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
+		await writeFile(join(repo, "package.json"), JSON.stringify({ name: "demo", version: "0.1.0" }, null, 2) + "\n");
+		await writeFile(join(repo, "Cargo.toml"), "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n");
+		await writeFile(join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\nversion = \"0.1.0\"\n");
+		await writeFile(join(repo, "build.zig.zon"), ".{\n    .name = .demo,\n    .version = \"0.1.0\",\n}\n");
+		await writeFile(join(repo, "mix.exs"), "def project do\n  [app: :demo, version: \"0.1.0\", elixir: \"~> 1.16\"]\nend\n");
+
+		const results = await bumpManifests(repo, { major: 0, minor: 2, patch: 0 });
+
+		expect(results).toEqual([
+			{ language: "JavaScript/TypeScript", name: "package.json", path: "package.json", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{ language: "Rust", name: "Cargo.toml", path: "Cargo.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{ language: "Python", name: "pyproject.toml", path: "pyproject.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{ language: "Zig", name: "build.zig.zon", path: "build.zig.zon", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{ language: "Elixir", name: "mix.exs", path: "mix.exs", versionBefore: "0.1.0", updated: true, reason: undefined },
+		]);
+		expect(JSON.parse(await readFile(join(repo, "package.json"), "utf8"))).toMatchObject({ version: "0.2.0" });
+		expect(await readFile(join(repo, "Cargo.toml"), "utf8")).toContain("version = \"0.2.0\"");
+		expect(await readFile(join(repo, "pyproject.toml"), "utf8")).toContain("version = \"0.2.0\"");
+		expect(await readFile(join(repo, "build.zig.zon"), "utf8")).toContain(".version = \"0.2.0\"");
+		expect(await readFile(join(repo, "mix.exs"), "utf8")).toContain("version: \"0.2.0\"");
+	});
+
+	it("detects project ecosystems from root marker files", async () => {
+		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
+		await writeFile(join(repo, "mix.exs"), "def project, do: [version: \"0.1.0\"]\n");
+		await writeFile(join(repo, "go.mod"), "module example.com/demo\n");
+		await writeFile(join(repo, "demo.gemspec"), "Gem::Specification.new do |s|\nend\n");
+
+		await expect(detectProjectProfile(repo)).resolves.toEqual({
+			root: repo,
+			ecosystems: ["Elixir", "Go", "Ruby"],
+			files: ["demo.gemspec", "go.mod", "mix.exs"],
+		});
+	});
+
+	it("skips generic fallback files when version fields are ambiguous", async () => {
+		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
+		await writeFile(
+			join(repo, "custom.toml"),
+			"version = \"0.1.0\"\n[dependency]\nversion = \"9.9.9\"\n",
+		);
+
+		await expect(bumpManifests(repo, { major: 0, minor: 2, patch: 0 })).resolves.toEqual([]);
+		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain("version = \"0.1.0\"");
+		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain("version = \"9.9.9\"");
+	});
+
+	it("reports detected manifests without writable versions", async () => {
+		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
+		await writeFile(join(repo, "package.json"), JSON.stringify({ name: "demo" }, null, 2) + "\n");
+		await writeFile(join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\ndynamic = [\"version\"]\n");
+
+		const results = await bumpManifests(repo, { major: 1, minor: 0, patch: 0 });
+
+		expect(results).toEqual([
+			{
+				language: "JavaScript/TypeScript",
+				name: "package.json",
+				path: "package.json",
+				versionBefore: null,
+				updated: false,
+				reason: "no writable version field found",
+			},
+			{
+				language: "Python",
+				name: "pyproject.toml",
+				path: "pyproject.toml",
+				versionBefore: null,
+				updated: false,
+				reason: "no writable version field found",
+			},
+		]);
+	});
+
+	it("formats manifest bump summaries", () => {
+		expect(formatManifestBumpSummary([], { major: 1, minor: 2, patch: 3 })).toEqual([
+			"No supported manifests found; skipping manifest bump.",
+		]);
+		expect(
+			formatManifestBumpSummary(
+				[
+					{ language: "JavaScript/TypeScript", name: "package.json", path: "package.json", versionBefore: "1.0.0", updated: true },
+					{
+						language: "Python",
+						name: "pyproject.toml",
+						path: "pyproject.toml",
+						versionBefore: null,
+						updated: false,
+						reason: "no writable version field found",
+					},
+				],
+				{ major: 1, minor: 2, patch: 3 },
+			),
+		).toEqual([
+			"Bumped JavaScript/TypeScript manifest package.json 1.0.0 → 1.2.3",
+			"Skipped Python manifest pyproject.toml: no writable version field found.",
+		]);
 	});
 
 	it("detects local and remote tag collisions before mutation", async () => {
