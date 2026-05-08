@@ -176,7 +176,7 @@ Hides the branch-vs-worktree fork from the rest of the system. Three subcommands
 /wt list           → print all worktrees in a friendly table (default subcommand)
 ```
 
-Pi runs in one cwd and cannot `cd` for the user — the extension prints an explicit `cd "<path>"` hint after each operation. `/wt land` removes only the working directory; the branch is preserved (use `git branch -d` separately, or let `/ship`'s pr-merged phase handle it via the same shared `removeWorktree` helper).
+Pi runs in one cwd and cannot `cd` for the user — the extension prints an explicit `cd "<path>"` hint after each operation. `/wt new` validates branch names with `git check-ref-format --branch`, resolves the main worktree safely, and runs `git fetch origin --prune` before creating a new branch so creation does not proceed on stale or unknown remote state. `/wt land` refuses to remove the main worktree, refuses dirty or unknown-cleanliness worktrees, removes only the working directory, and preserves the branch (use `git branch -d` separately, or let `/ship`'s pr-merged phase handle it via the same shared `removeWorktree` helper).
 
 ### Implementation status
 

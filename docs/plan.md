@@ -36,7 +36,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
   *Done when:* `/release` cannot silently omit a newly-created `CHANGELOG.md`, tag collisions fail before mutation, and failure modes explain how to recover.
 
-- [ ] **`feat(extensions): support multi-manifest releases`**
+- [x] **`feat(extensions): support multi-manifest releases`**
 
   Add manifest adapters so `/release` can operate across project types instead of being Node-only. Start with `package.json`, `Cargo.toml`, and `pyproject.toml`; detect supported manifests, read/write versions consistently, and handle multiple detected manifests deliberately. This anchors to `SPEC.md:153` (`git-release`) and the repo's goal that release tooling be reusable across languages.
 
