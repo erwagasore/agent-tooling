@@ -42,7 +42,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
   *Done when:* supported manifests are detected and bumped consistently, with tests for each adapter and clear behavior when multiple supported manifests exist.
 
-- [ ] **`fix(extensions): harden git-worktree safety`**
+- [x] **`fix(extensions): harden git-worktree safety`**
 
   Make `/wt` safer in `pi-extensions/git-worktree/index.ts`: validate branch names with `git check-ref-format --branch`, fetch/prune before creation, improve main-worktree path resolution, and refuse unsafe land/remove cases with clear guidance. This anchors to `SPEC.md:255` (Worktree mode) and the `git-worktree` command surface in `SPEC.md:167`.
 

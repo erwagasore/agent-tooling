@@ -213,7 +213,7 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 | `create-release` | check-preflight → detect-default-branch → cleanup-branch → check-worktree → detect-provider |
 | `commit-changes` | check-preflight |
 | `init-repo` | detect-provider → detect-default-branch |
-| `sync-docs` | standalone — scans repo, updates docs |
+| `sync-docs` | standalone — scans repo, updates docs and generated README command/component sections |
 | `create-skill` | standalone — scaffolds a new skill |
 | `create-plan` | standalone — drafts `docs/plan.md` |
 | `promote-plan` | standalone — folds plan into SPEC.md and resets |
