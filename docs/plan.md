@@ -16,7 +16,7 @@ Cycle goal: establish a tested, docs-synced, safer foundation for the `git-*` ex
 
   *Done when:* `npm run verify` exists, runs typecheck plus tests, and passes with at least one committed smoke/unit test.
 
-- [ ] **`test(extensions): cover git-release and shared helpers`**
+- [x] **`test(extensions): cover git-release and shared helpers`**
 
   Add tests for `pi-extensions/git-release/index.ts` and `pi-extensions/_shared/git-internals.ts`: semver parsing, bump computation, changelog rendering, `BREAKING CHANGE` footer detection, provider detection, and PR URL parsing where practical. This anchors to `SPEC.md:153` (`git-release`) and `SPEC.md:135` (`git-pr`).
 
