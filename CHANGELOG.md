@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.2] — 2026-05-09
+
+### Other
+
+- Plan extension coverage hardening cycle (#48)
+- Cover git-context tool behavior (#49)
+- Cover git-guard assertions (#50)
+- Cover git-pr tool behavior (#51)
+- Cover git-ship command phases (#52)
+- Cover plan-cycle and peculiars (#53)
+- Promote extension coverage hardening cycle (#54)
+
 ## [0.10.1] — 2026-05-09
 
 ### Other
