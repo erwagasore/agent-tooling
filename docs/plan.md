@@ -24,7 +24,7 @@ Cycle goal: reconcile the remaining skill/docs drift so the public workflow docs
 
   *Done when:* `create-pr` clearly delegates mechanical PR creation to `git-pr` / shared helpers and no longer documents provider behavior that is not implemented.
 
-- [ ] **`docs(skills): align cleanup-branch with worktree safety`**
+- [x] **`docs(skills): align cleanup-branch with worktree safety`**
 
   Update `skills/cleanup-branch/SKILL.md` so its worktree wording matches current reality: pi cannot `cd` for the user, `/wt land` has stricter safety rules, and `/ship` is the canonical post-merge cleanup path. This anchors to `SPEC.md:167` (`git-worktree`) and `SPEC.md:267` (Worktree mode).
 
