@@ -38,7 +38,7 @@ Cycle goal: reconcile the remaining skill/docs drift so the public workflow docs
 
 ## Phase 3 — Policy alignment
 
-- [ ] **`docs(agents): document bootstrap default-branch exception`**
+- [x] **`docs(agents): document bootstrap default-branch exception`**
 
   Resolve the policy mismatch between `skills/bootstrap-project/SKILL.md`, which allows an initial docs bootstrap commit on the default branch, and `AGENTS.md`, which currently names only `/release` as a direct-to-default exception. Document bootstrap initial setup as an explicit exception, scoped to the first repository setup before normal PR workflow starts. This anchors to `SPEC.md:222` (Composite skills), `SPEC.md:239` (Conventions), and `AGENTS.md` Workflow/Releases.
 
