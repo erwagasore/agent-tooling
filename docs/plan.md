@@ -22,7 +22,7 @@ Cycle goal: broaden automated coverage across the remaining under-tested extensi
 
   *Done when:* each guard option and representative combinations are covered, including failure details and `isError`.
 
-- [ ] **`test(extensions): cover git-pr tool behavior`**
+- [x] **`test(extensions): cover git-pr tool behavior`**
 
   Add tests for `pi-extensions/git-pr/index.ts`: validation failures, unsupported providers, default-branch guard, detached-head guard, existing open PR reuse, closed/merged PR non-reuse, successful GitHub/GitLab creation through shared `createPr()`, and error details. This anchors to `SPEC.md:135` (`git-pr`) and `SPEC.md:212` (`create-pr`).
 
