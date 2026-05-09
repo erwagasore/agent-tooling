@@ -38,7 +38,7 @@ Cycle goal: broaden automated coverage across the remaining under-tested extensi
 
 ## Phase 3 — Non-git extension smoke coverage
 
-- [ ] **`test(extensions): cover plan-cycle and peculiars`**
+- [x] **`test(extensions): cover plan-cycle and peculiars`**
 
   Add lightweight tests for the two non-`git-*` extensions: `pi-extensions/plan-cycle/index.ts` should cover no-arg planning, empty-session model switch, and active-session choices (`KEEP`, `SWITCH`, `CANCEL`, plus `FRESH` if mockable); `pi-extensions/peculiars/index.ts` should cover event handlers setting/clearing working messages and headless no-op behavior. This anchors to `AGENTS.md:41-42` (repo-map entries) and `SPEC.md:268` (verification convention).
 
