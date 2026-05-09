@@ -18,7 +18,7 @@ Cycle goal: reconcile the remaining skill/docs drift so the public workflow docs
 
 ## Phase 2 — Skill docs aligned to extension-backed workflows
 
-- [ ] **`docs(skills): slim create-pr around git-pr`**
+- [x] **`docs(skills): slim create-pr around git-pr`**
 
   Rewrite `skills/create-pr/SKILL.md` as a human-facing PR workflow doc backed by `git_pr()`, similar to `create-release` → `/release` and `ship-feature` → `/ship`. Remove stale direct-provider details like unsupported Gitea draft handling, while preserving judgement steps the user still owns: confirm push, title/body quality, and draft choice. This anchors to `SPEC.md:135` (`git-pr`) and `SPEC.md:207` (Workflow skills).
 
