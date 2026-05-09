@@ -199,7 +199,7 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 |---|---|---|
 | `check-preflight` | Abort if not a git repo or no remote | `git-guard` |
 | `check-worktree` | Abort if uncommitted changes | `git-guard` |
-| `cleanup-branch` | Delete merged branch (auto-detects branch vs worktree) | `git-context` + plain git |
+| `cleanup-branch` | Delete merged branch in branch mode; worktree cleanup is owned by `/ship` or `/wt land` | `git-context` + plain git |
 | `detect-default-branch` | Resolve default branch name | `git-context` |
 | `detect-existing-pr` | Find latest PR for current branch (any state — callers filter) | `git-context` |
 | `detect-provider` | Identify git host and CLI | `git-context` |
@@ -209,10 +209,10 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 | Skill | Composes |
 |---|---|
 | `create-branch` | check-preflight → check-worktree → detect-default-branch → cleanup-branch |
-| `create-pr` | check-preflight → detect-default-branch → detect-provider → detect-existing-pr |
+| `create-pr` | check-preflight → detect-default-branch → detect-existing-pr → `git-pr` / `git_pr()` |
 | `create-release` | check-preflight → detect-default-branch → cleanup-branch → check-worktree → detect-provider |
 | `commit-changes` | check-preflight |
-| `init-repo` | detect-provider → detect-default-branch |
+| `init-repo` | detect-provider → detect-default-branch; GitHub/GitLab automated setup, other providers manual/limited |
 | `sync-docs` | standalone — scans repo, updates docs and generated README command/component sections |
 | `create-skill` | standalone — scaffolds a new skill |
 | `create-plan` | standalone — drafts `docs/plan.md` |
@@ -223,7 +223,7 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 
 | Skill | Composes | When |
 |---|---|---|
-| `bootstrap-project` | init-repo → sync-docs → create-branch | Day one of a new project |
+| `bootstrap-project` | init-repo → sync-docs → create-branch | Day one of a new project, before normal PR workflow exists |
 | `ship-feature` | create-pr → cleanup-branch (state machine) | Ready to deliver |
 
 `ship-feature` is a human-facing doc for the `/ship` state machine — run repeatedly:
@@ -251,6 +251,19 @@ When in doubt:
 - Skills: `<verb>-<noun>` (e.g. `create-branch`, `detect-provider`).
 - Extensions: every git-related extension carries the `git-` prefix (e.g. `git-context`, `git-ship`).
 - Branches: `{type}/{short-description}` — lowercase, hyphens. `wip/{YYYY-MM-DD}` for ad-hoc work.
+
+### Provider support boundary
+
+The automated `git-*` provider surface is intentionally explicit:
+
+| Provider | Detection | PR automation (`git-pr` / `/ship`) | Release notes (`/release`) | Init guidance |
+|---|---:|---:|---:|---:|
+| GitHub | yes | yes via `gh` | yes via `gh release create` | automated via `gh` |
+| GitLab | yes | yes via `glab` | yes via `glab release create` | automated via `glab` |
+| Bitbucket | yes | no | no | manual |
+| Codeberg / Gitea | no | no | no | manual/API guidance only |
+
+Skills must not imply unsupported providers are automated. They may give manual setup guidance, but PR/release publishing should stop with a clear unsupported-provider message unless provider support is implemented in the extension layer.
 
 ### Verification
 
@@ -297,4 +310,4 @@ pi-extensions/<name>/index.ts    ← extension code
 pi-extensions/_shared/*.ts       ← cross-extension helpers (no index.ts → not loaded by pi)
 ```
 
-Operational rules (commits, releases, merge strategy, definition of done) live in [AGENTS.md](AGENTS.md).
+Operational rules (commits, releases, merge strategy, definition of done, and narrow direct-to-default exceptions for first-time bootstrap and release commits) live in [AGENTS.md](AGENTS.md).
