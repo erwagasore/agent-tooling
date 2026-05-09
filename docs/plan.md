@@ -10,7 +10,7 @@ Cycle goal: broaden automated coverage across the remaining under-tested extensi
 
 ## Phase 1 — Core tool coverage
 
-- [ ] **`test(extensions): cover git-context tool behavior`**
+- [x] **`test(extensions): cover git-context tool behavior`**
 
   Add tests for `pi-extensions/git-context/index.ts`: provider detection integration, default/current branch fields, clean/dirty state, remote presence, existing PR presence/null, warning paths, and formatted summary output via the mock pi harness. This anchors to `SPEC.md:82` (`git-context`) and `SPEC.md:200-205` (utility skills backed by git-context).
 
