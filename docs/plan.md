@@ -10,7 +10,7 @@ Cycle goal: reconcile the remaining skill/docs drift so the public workflow docs
 
 ## Phase 1 — Small repo-map correction
 
-- [ ] **`docs(agents): fix remaining repo-map drift`**
+- [x] **`docs(agents): fix remaining repo-map drift`**
 
   Update `AGENTS.md` stale wording for `skills/detect-existing-pr/` so it says the skill reports the latest PR in any state (`open`, `merged`, or `closed`), not open-only. While there, review whether `AGENTS.md` should mention v0.10.0 verification/package metadata in the repo map without duplicating SPEC. This anchors to `SPEC.md:196` (Utility skills) and `SPEC.md:280` (File layout).
 
