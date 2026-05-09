@@ -10,7 +10,7 @@ Cycle goal: tighten the v0.10.x repo around style consistency, release ergonomic
 
 ## Phase 1 — Style baseline
 
-- [ ] **`chore(repo): add formatter and unify code style`**
+- [x] **`chore(repo): add formatter and unify code style`**
 
   Pick a formatter (recommend Biome since it can replace Prettier + a basic linter), configure it for the repo, run it once across `pi-extensions/**` and `tests/**`, and add `format` / `format:check` scripts wired into `npm run verify`. Resolves the tab-vs-space inconsistency between older (`peculiars`, `plan-cycle`) and newer extensions. This anchors to `SPEC.md:268` (Verification), `SPEC.md:249` (Naming), and `SPEC.md:293` (File layout).
 
@@ -38,7 +38,7 @@ Cycle goal: tighten the v0.10.x repo around style consistency, release ergonomic
 
   *Done when:* the rename watch-item is documented in a single, discoverable place with a clear next-step trigger (e.g., when the new package reaches feature parity).
 
-- [ ] **`chore(repo): delete stale fix/sync-docs-update-existing-files branch`**
+- [x] **`chore(repo): delete stale fix/sync-docs-update-existing-files branch`**
 
   Remove the local stale branch `fix/sync-docs-update-existing-files`, whose origin is already gone, so `git branch -vv` is clean. This task does not produce a PR; tick it on the next branch's first commit alongside the previous task tick.
 
