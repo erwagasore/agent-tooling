@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.1] — 2026-05-09
+
+### Other
+
+- Plan skill docs polish cycle (#41)
+- Fix remaining repo-map drift (#42)
+- Slim create-pr around git-pr (#43)
+- Align cleanup-branch with worktree safety (#44)
+- Clarify init-repo provider support (#45)
+- Document bootstrap default-branch exception (#46)
+- Promote skill docs polish cycle (#47)
+
 ## [0.10.0] — 2026-05-08
 
 ### Features
