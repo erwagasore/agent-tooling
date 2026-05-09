@@ -275,7 +275,7 @@ npm test            → vitest run
 npm run verify      → typecheck + tests
 ```
 
-Tests live under `tests/` and should prefer pure helper coverage or mock pi-extension harnesses over live remotes. Any change to extension behavior should add or update tests in the same PR.
+Tests live under `tests/`, including a committed `tests/helpers/pi-harness.ts` mock of the pi extension API. Tests should prefer pure helpers or this mock harness over live remotes, must cover both happy and failure paths, and must include any non-git extensions added to `pi-extensions/`. Any change to extension behavior should add or update tests in the same PR.
 
 ### Worktree mode
 
