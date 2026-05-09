@@ -4,7 +4,10 @@ import type { ExecRunner } from "../pi-extensions/_shared/git-internals.ts";
 import { createMockPi } from "./helpers/pi-harness.ts";
 
 function execFrom(
-	handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
 ): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
@@ -54,9 +57,7 @@ describe("git-context tool", () => {
 					return { stdout: "" };
 				case "gh pr list --head feat/foo --state all --json number,url,state --limit 1":
 					return {
-						stdout: JSON.stringify([
-							{ number: 12, url: "https://github.com/owner/repo/pull/12", state: "OPEN" },
-						]),
+						stdout: JSON.stringify([{ number: 12, url: "https://github.com/owner/repo/pull/12", state: "OPEN" }]),
 					};
 				default:
 					return { stderr: `unexpected command: ${key}`, code: 1 };
@@ -80,7 +81,9 @@ describe("git-context tool", () => {
 			warnings: [],
 		});
 		expect(result.content[0].text).toContain("provider:       github");
-		expect(result.content[0].text).toContain("existingPr:     #12 (open) https://github.com/owner/repo/pull/12");
+		expect(result.content[0].text).toContain(
+			"existingPr:     #12 (open) https://github.com/owner/repo/pull/12",
+		);
 	});
 
 	it("falls back safely when no origin remote is configured", async () => {
@@ -188,9 +191,7 @@ describe("git-context tool", () => {
 		const result = await executeGitContext(exec);
 
 		expect(result.details.existingPr).toBeNull();
-		expect(result.details.warnings).toEqual([
-			"gh CLI unavailable or unauthenticated; existingPr left as null",
-		]);
+		expect(result.details.warnings).toEqual(["gh CLI unavailable or unauthenticated; existingPr left as null"]);
 		expect(result.content[0].text).toContain("warnings:");
 		expect(result.content[0].text).toContain("gh CLI unavailable or unauthenticated");
 	});

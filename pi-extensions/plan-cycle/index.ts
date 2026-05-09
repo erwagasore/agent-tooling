@@ -14,10 +14,7 @@
  * start a fresh session at the new model, or cancel.
  */
 
-import type {
-  ExtensionAPI,
-  ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 
 // ── Choice constants ─────────────────────────────────────────
 
@@ -29,64 +26,64 @@ const CANCEL = "Cancel";
 // ── Helpers ──────────────────────────────────────────────────
 
 function hasActiveConversation(ctx: ExtensionCommandContext): boolean {
-  return ctx.sessionManager.getEntries().some(
-    (e) =>
-      e.type === "message" &&
-      (e.message.role === "user" || e.message.role === "assistant"),
-  );
+	return ctx.sessionManager
+		.getEntries()
+		.some((e) => e.type === "message" && (e.message.role === "user" || e.message.role === "assistant"));
 }
 
 // ── Extension ────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
-  pi.registerCommand("plan", {
-    description:
-      "Draft docs/plan.md from the current conversation. Optional: /plan <model-id> uses Pi's /model id format, e.g. /plan claude-opus-4-7",
-    handler: async (args: string, ctx: ExtensionCommandContext) => {
-      const modelId = (args ?? "").trim();
+	pi.registerCommand("plan", {
+		description:
+			"Draft docs/plan.md from the current conversation. Optional: /plan <model-id> uses Pi's /model id format, e.g. /plan claude-opus-4-7",
+		handler: async (args: string, ctx: ExtensionCommandContext) => {
+			const modelId = (args ?? "").trim();
 
-      // No model arg → run the skill in the current model.
-      if (!modelId) {
-        await pi.sendUserMessage("/skill:create-plan");
-        return;
-      }
+			// No model arg → run the skill in the current model.
+			if (!modelId) {
+				await pi.sendUserMessage("/skill:create-plan");
+				return;
+			}
 
-      // Empty session → switch and run.
-      if (!hasActiveConversation(ctx)) {
-        await pi.sendUserMessage(`/model ${modelId}`);
-        await pi.sendUserMessage("/skill:create-plan");
-        return;
-      }
+			// Empty session → switch and run.
+			if (!hasActiveConversation(ctx)) {
+				await pi.sendUserMessage(`/model ${modelId}`);
+				await pi.sendUserMessage("/skill:create-plan");
+				return;
+			}
 
-      // Active conversation → ask before changing anything.
-      const choice = await ctx.ui.select(
-        `Switching to ${modelId} mid-conversation. What do you want to do?`,
-        [KEEP, SWITCH, FRESH, CANCEL],
-      );
+			// Active conversation → ask before changing anything.
+			const choice = await ctx.ui.select(`Switching to ${modelId} mid-conversation. What do you want to do?`, [
+				KEEP,
+				SWITCH,
+				FRESH,
+				CANCEL,
+			]);
 
-      if (!choice || choice === CANCEL) return;
+			if (!choice || choice === CANCEL) return;
 
-      if (choice === KEEP) {
-        await pi.sendUserMessage("/skill:create-plan");
-        return;
-      }
+			if (choice === KEEP) {
+				await pi.sendUserMessage("/skill:create-plan");
+				return;
+			}
 
-      if (choice === SWITCH) {
-        await pi.sendUserMessage(`/model ${modelId}`);
-        await pi.sendUserMessage("/skill:create-plan");
-        return;
-      }
+			if (choice === SWITCH) {
+				await pi.sendUserMessage(`/model ${modelId}`);
+				await pi.sendUserMessage("/skill:create-plan");
+				return;
+			}
 
-      // FRESH: new session seeded with model select + plan invocation.
-      const parentSession = ctx.sessionManager.getSessionFile() ?? undefined;
-      await ctx.newSession({
-        parentSession,
-        withSession: async (newCtx) => {
-          // Captured `pi` is stale after replacement — use only newCtx.
-          await newCtx.sendUserMessage(`/model ${modelId}`);
-          await newCtx.sendUserMessage("/skill:create-plan");
-        },
-      });
-    },
-  });
+			// FRESH: new session seeded with model select + plan invocation.
+			const parentSession = ctx.sessionManager.getSessionFile() ?? undefined;
+			await ctx.newSession({
+				parentSession,
+				withSession: async (newCtx) => {
+					// Captured `pi` is stale after replacement — use only newCtx.
+					await newCtx.sendUserMessage(`/model ${modelId}`);
+					await newCtx.sendUserMessage("/skill:create-plan");
+				},
+			});
+		},
+	});
 }

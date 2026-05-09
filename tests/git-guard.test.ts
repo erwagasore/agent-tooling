@@ -4,7 +4,10 @@ import type { ExecRunner } from "../pi-extensions/_shared/git-internals.ts";
 import { createMockPi } from "./helpers/pi-harness.ts";
 
 function execFrom(
-	handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
 ): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
@@ -17,13 +20,15 @@ function execFrom(
 	};
 }
 
-function repoExec(opts: {
-	remote?: boolean;
-	status?: string | null;
-	currentBranch?: string;
-	defaultBranch?: string;
-	mode?: "branch" | "worktree";
-} = {}): ExecRunner {
+function repoExec(
+	opts: {
+		remote?: boolean;
+		status?: string | null;
+		currentBranch?: string;
+		defaultBranch?: string;
+		mode?: "branch" | "worktree";
+	} = {},
+): ExecRunner {
 	const remote = opts.remote ?? true;
 	const status = opts.status ?? "";
 	const currentBranch = opts.currentBranch ?? "feat/foo";
@@ -207,7 +212,13 @@ describe("git-guard tool", () => {
 
 	it("aggregates multiple failures without short-circuiting", async () => {
 		const result = await executeGitGuard(
-			repoExec({ remote: false, status: " M README.md\n", currentBranch: "main", defaultBranch: "main", mode: "branch" }),
+			repoExec({
+				remote: false,
+				status: " M README.md\n",
+				currentBranch: "main",
+				defaultBranch: "main",
+				mode: "branch",
+			}),
 			{
 				requireClean: true,
 				requireRemote: true,

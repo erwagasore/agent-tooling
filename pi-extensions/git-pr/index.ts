@@ -48,12 +48,8 @@ const PARAMS = Type.Object({
 		description: "PR title (Conventional Commit format).",
 		minLength: 1,
 	}),
-	body: Type.Optional(
-		Type.String({ description: "PR body / description. Defaults to empty string." }),
-	),
-	draft: Type.Optional(
-		Type.Boolean({ description: "Open the PR in draft state. Default false." }),
-	),
+	body: Type.Optional(Type.String({ description: "PR body / description. Defaults to empty string." })),
+	draft: Type.Optional(Type.Boolean({ description: "Open the PR in draft state. Default false." })),
 });
 export type GitPrParams = Static<typeof PARAMS>;
 
@@ -72,8 +68,7 @@ export default function gitPrExtension(pi: ExtensionAPI) {
 		label: "Git PR",
 		description:
 			"Create a pull/merge request for the current branch on the host of origin (GitHub via gh, GitLab via glab). Re-uses an open PR for the same head branch if one already exists. Returns isError: true with structured details on failure.",
-		promptSnippet:
-			"Open or re-use a PR for the current branch on GitHub or GitLab via gh/glab.",
+		promptSnippet: "Open or re-use a PR for the current branch on GitHub or GitLab via gh/glab.",
 		promptGuidelines: [
 			"Use git_pr to create the PR after pushing a feature branch — it deduplicates against existing open PRs and works across GitHub and GitLab.",
 			"git_pr requires the branch to already be pushed; push first, then call git_pr.",
@@ -84,8 +79,7 @@ export default function gitPrExtension(pi: ExtensionAPI) {
 
 			const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
 			const provider = detectProvider(remoteUrl);
-			const currentBranch =
-				(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
+			const currentBranch = (await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
 			const defaultBranch = await detectDefaultBranch(exec, signal);
 
 			const fail = (reason: string) => {
@@ -120,12 +114,7 @@ export default function gitPrExtension(pi: ExtensionAPI) {
 			}
 
 			// Re-use open PR if one exists for this branch
-			const existing: ExistingPr | null = await findExistingPr(
-				exec,
-				provider,
-				currentBranch,
-				signal,
-			);
+			const existing: ExistingPr | null = await findExistingPr(exec, provider, currentBranch, signal);
 			if (existing && existing.state === "open") {
 				return succeed(existing.number, existing.url, true);
 			}

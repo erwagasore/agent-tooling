@@ -74,8 +74,7 @@ export default function gitContextExtension(pi: ExtensionAPI) {
 		label: "Git Context",
 		description:
 			"Return one-call introspection of the current git repo: provider, default branch, current branch, worktree mode, cleanliness, remote presence, and any existing PR for the current branch. Best-effort — fields default to safe values when subcommands fail; soft failures are listed in `warnings`.",
-		promptSnippet:
-			"Inspect the current git repo in one call (provider, branches, mode, clean, remote, PR).",
+		promptSnippet: "Inspect the current git repo in one call (provider, branches, mode, clean, remote, PR).",
 		promptGuidelines: [
 			"Use git_context as the first step of any git workflow that needs repo state — it replaces multiple shell calls and never throws.",
 		],
@@ -88,8 +87,7 @@ export default function gitContextExtension(pi: ExtensionAPI) {
 			const provider = detectProvider(remoteUrl);
 			const hasRemote = remoteUrl !== null;
 
-			const currentBranch =
-				(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
+			const currentBranch = (await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
 			const defaultBranch = await detectDefaultBranch(exec, signal);
 			const mode = await detectMode(exec, signal);
 

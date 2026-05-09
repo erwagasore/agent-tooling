@@ -4,7 +4,10 @@ import type { ExecRunner } from "../pi-extensions/_shared/git-internals.ts";
 import { createMockPi } from "./helpers/pi-harness.ts";
 
 function execFrom(
-	handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
 ): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
@@ -17,14 +20,16 @@ function execFrom(
 	};
 }
 
-function repoExec(opts: {
-	remoteUrl?: string | null;
-	currentBranch?: string;
-	defaultBranch?: string;
-	existingPr?: Array<{ number?: number; url?: string; state?: string }> | null;
-	createOut?: string;
-	createCode?: number;
-} = {}): ExecRunner {
+function repoExec(
+	opts: {
+		remoteUrl?: string | null;
+		currentBranch?: string;
+		defaultBranch?: string;
+		existingPr?: Array<{ number?: number; url?: string; state?: string }> | null;
+		createOut?: string;
+		createCode?: number;
+	} = {},
+): ExecRunner {
 	const remoteUrl = opts.remoteUrl === undefined ? "git@github.com:owner/repo.git" : opts.remoteUrl;
 	const currentBranch = opts.currentBranch ?? "feat/foo";
 	const defaultBranch = opts.defaultBranch ?? "main";
@@ -55,7 +60,10 @@ function repoExec(opts: {
 			return { stdout: opts.createOut ?? "https://github.com/owner/repo/pull/99\n", code: opts.createCode ?? 0 };
 		}
 		if (key.startsWith("glab mr create")) {
-			return { stdout: opts.createOut ?? "https://gitlab.com/owner/repo/-/merge_requests/7\n", code: opts.createCode ?? 0 };
+			return {
+				stdout: opts.createOut ?? "https://gitlab.com/owner/repo/-/merge_requests/7\n",
+				code: opts.createCode ?? 0,
+			};
 		}
 
 		return { stderr: `unexpected command: ${key}`, code: 1 };

@@ -10,11 +10,7 @@ import type { ExecOptions, ExecResult } from "@mariozechner/pi-coding-agent";
 
 // ── Types ────────────────────────────────────────────────────
 
-export type ExecRunner = (
-	cmd: string,
-	args: string[],
-	opts?: ExecOptions,
-) => Promise<ExecResult>;
+export type ExecRunner = (cmd: string, args: string[], opts?: ExecOptions) => Promise<ExecResult>;
 
 export type GitMode = "branch" | "worktree";
 
@@ -36,9 +32,7 @@ export interface CreatePrOptions {
 	head: string;
 }
 
-export type CreatePrResult =
-	| { ok: true; number: number; url: string }
-	| { ok: false; error: string };
+export type CreatePrResult = { ok: true; number: number; url: string } | { ok: false; error: string };
 
 export interface RemoveWorktreeResult {
 	ok: boolean;
@@ -77,16 +71,8 @@ export async function tryExec(
  *   3. local existence check for `main`/`master`
  *   4. fallback: "main"
  */
-export async function detectDefaultBranch(
-	exec: ExecRunner,
-	signal?: AbortSignal,
-): Promise<string> {
-	const symRef = await tryExec(
-		exec,
-		"git",
-		["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
-		signal,
-	);
+export async function detectDefaultBranch(exec: ExecRunner, signal?: AbortSignal): Promise<string> {
+	const symRef = await tryExec(exec, "git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], signal);
 	if (symRef) return symRef.replace(/^origin\//, "");
 
 	const remoteShow = await tryExec(exec, "git", ["remote", "show", "origin"], signal);
@@ -96,12 +82,7 @@ export async function detectDefaultBranch(
 	}
 
 	for (const candidate of ["main", "master"]) {
-		const ref = await tryExec(
-			exec,
-			"git",
-			["show-ref", "--verify", `refs/heads/${candidate}`],
-			signal,
-		);
+		const ref = await tryExec(exec, "git", ["show-ref", "--verify", `refs/heads/${candidate}`], signal);
 		if (ref !== null) return candidate;
 	}
 	return "main";
@@ -112,10 +93,7 @@ export async function detectDefaultBranch(
  * worktree (`worktree`). Returns `"branch"` for non-repos or single-worktree
  * repos so that "branch" stays the safe default.
  */
-export async function detectMode(
-	exec: ExecRunner,
-	signal?: AbortSignal,
-): Promise<GitMode> {
+export async function detectMode(exec: ExecRunner, signal?: AbortSignal): Promise<GitMode> {
 	const worktreeList = await tryExec(exec, "git", ["worktree", "list", "--porcelain"], signal);
 	const topLevel = await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal);
 	if (!worktreeList || !topLevel) return "branch";
@@ -164,18 +142,7 @@ export async function findExistingPr(
 		const out = await tryExec(
 			exec,
 			"gh",
-			[
-				"pr",
-				"list",
-				"--head",
-				branch,
-				"--state",
-				"all",
-				"--json",
-				"number,url,state",
-				"--limit",
-				"1",
-			],
+			["pr", "list", "--head", branch, "--state", "all", "--json", "number,url,state", "--limit", "1"],
 			signal,
 		);
 		if (out === null) {
@@ -232,28 +199,20 @@ export async function removeWorktree(
 	signal?: AbortSignal,
 ): Promise<RemoveWorktreeResult> {
 	try {
-		const remove = await exec(
-			"git",
-			["-C", mainPath, "worktree", "remove", worktreePath],
-			{ signal, timeout: TIMEOUT_MS },
-		);
+		const remove = await exec("git", ["-C", mainPath, "worktree", "remove", worktreePath], {
+			signal,
+			timeout: TIMEOUT_MS,
+		});
 		const removeOut = [remove.stdout, remove.stderr].filter(Boolean).join("\n").trim();
 		if (remove.code !== 0 || remove.killed) {
 			return {
 				ok: false,
-				message:
-					removeOut ||
-					`git -C ${mainPath} worktree remove ${worktreePath} failed (code ${remove.code})`,
+				message: removeOut || `git -C ${mainPath} worktree remove ${worktreePath} failed (code ${remove.code})`,
 			};
 		}
-		const prune = await exec(
-			"git",
-			["-C", mainPath, "worktree", "prune"],
-			{ signal, timeout: TIMEOUT_MS },
-		);
+		const prune = await exec("git", ["-C", mainPath, "worktree", "prune"], { signal, timeout: TIMEOUT_MS });
 		const pruneOut = [prune.stdout, prune.stderr].filter(Boolean).join("\n").trim();
-		const pruneNote =
-			prune.code !== 0 && pruneOut ? `prune note: ${pruneOut}` : "";
+		const pruneNote = prune.code !== 0 && pruneOut ? `prune note: ${pruneOut}` : "";
 		return {
 			ok: true,
 			message: [removeOut, pruneNote].filter(Boolean).join("\n"),

@@ -30,13 +30,7 @@ import {
 
 // ── Types ────────────────────────────────────────────────────
 
-type ShipState =
-	| "default-clean"
-	| "default-dirty"
-	| "no-pr"
-	| "pr-open"
-	| "pr-merged"
-	| "pr-closed";
+type ShipState = "default-clean" | "default-dirty" | "no-pr" | "pr-open" | "pr-merged" | "pr-closed";
 
 interface ShipContext {
 	provider: Provider;
@@ -53,8 +47,7 @@ interface ShipContext {
 async function readShipContext(exec: ExecRunner, signal?: AbortSignal): Promise<ShipContext> {
 	const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
 	const status = await tryExec(exec, "git", ["status", "--porcelain"], signal);
-	const currentBranch =
-		(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
+	const currentBranch = (await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
 	const defaultBranch = await detectDefaultBranch(exec, signal);
 	const mode = await detectMode(exec, signal);
 	const provider = detectProvider(remoteUrl);
@@ -153,19 +146,11 @@ async function phaseNoPr(
 		return;
 	}
 	if (!c.isClean) {
-		ctx.ui.notify(
-			"Worktree has uncommitted changes. Commit or stash before shipping.",
-			"warning",
-		);
+		ctx.ui.notify("Worktree has uncommitted changes. Commit or stash before shipping.", "warning");
 		return;
 	}
 
-	const diffStat = await tryExec(
-		exec,
-		"git",
-		["diff", "--stat", `${c.defaultBranch}..HEAD`],
-		signal,
-	);
+	const diffStat = await tryExec(exec, "git", ["diff", "--stat", `${c.defaultBranch}..HEAD`], signal);
 	const commitList = await tryExec(
 		exec,
 		"git",
@@ -180,7 +165,12 @@ async function phaseNoPr(
 		return;
 	}
 
-	const lastSubject = commitList.trim().split("\n").pop()?.replace(/^[0-9a-f]+\s+/, "") ?? "";
+	const lastSubject =
+		commitList
+			.trim()
+			.split("\n")
+			.pop()
+			?.replace(/^[0-9a-f]+\s+/, "") ?? "";
 
 	console.log(`\n=== Ready to push \`${c.currentBranch}\` ===`);
 	if (diffStat) console.log(diffStat);
@@ -202,8 +192,7 @@ async function phaseNoPr(
 	}
 	console.log(push.out);
 
-	const title =
-		(await ctx.ui.input("PR title (Conventional Commit):", lastSubject)) ?? lastSubject;
+	const title = (await ctx.ui.input("PR title (Conventional Commit):", lastSubject)) ?? lastSubject;
 	if (!title.trim()) {
 		ctx.ui.notify("Empty PR title; aborting before PR creation.", "warning");
 		return;
@@ -242,12 +231,7 @@ async function phasePrMerged(
 	ctx: ExtensionCommandContext,
 	signal?: AbortSignal,
 ): Promise<void> {
-	const remoteHead = await tryExec(
-		exec,
-		"git",
-		["ls-remote", "--heads", "origin", c.currentBranch],
-		signal,
-	);
+	const remoteHead = await tryExec(exec, "git", ["ls-remote", "--heads", "origin", c.currentBranch], signal);
 	if (remoteHead) {
 		const ok = await ctx.ui.confirm(
 			"Remote branch still exists",
@@ -304,10 +288,7 @@ async function phasePrMerged(
 		ctx.ui.notify(`git pull failed:\n${pull.out}`, "warning");
 	}
 
-	ctx.ui.notify(
-		`Landed on \`${c.defaultBranch}\`. Local branch \`${previousBranch}\` cleaned up.`,
-		"info",
-	);
+	ctx.ui.notify(`Landed on \`${c.defaultBranch}\`. Local branch \`${previousBranch}\` cleaned up.`, "info");
 }
 
 // ── Slash command ────────────────────────────────────────────
@@ -333,10 +314,7 @@ export default function gitShipExtension(pi: ExtensionAPI) {
 					ctx.ui.notify("Nothing to ship. Use `/create-branch` to start work.", "info");
 					return;
 				case "default-dirty":
-					ctx.ui.notify(
-						"Dirty work on default branch. Run `/create-branch` then `/commit-changes`.",
-						"warning",
-					);
+					ctx.ui.notify("Dirty work on default branch. Run `/create-branch` then `/commit-changes`.", "warning");
 					return;
 				case "no-pr":
 					await phaseNoPr(exec, c, ctx, signal);
@@ -348,10 +326,7 @@ export default function gitShipExtension(pi: ExtensionAPI) {
 					await phasePrMerged(exec, c, ctx, signal);
 					return;
 				case "pr-closed":
-					ctx.ui.notify(
-						"PR was closed without merging. Investigate before re-shipping.",
-						"warning",
-					);
+					ctx.ui.notify("PR was closed without merging. Investigate before re-shipping.", "warning");
 					return;
 			}
 		},
