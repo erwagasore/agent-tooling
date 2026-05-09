@@ -16,7 +16,7 @@ Cycle goal: broaden automated coverage across the remaining under-tested extensi
 
   *Done when:* `git_context()` success and soft-failure paths are covered without live remotes, and `npm run verify` passes.
 
-- [ ] **`test(extensions): cover git-guard assertions`**
+- [x] **`test(extensions): cover git-guard assertions`**
 
   Add tests for `pi-extensions/git-guard/index.ts`: `requireClean`, `requireRemote`, `requireBranch`, `requireMode`, detached-head behavior, multi-failure aggregation, `isError` behavior, and formatted pass/fail summaries. This anchors to `SPEC.md:99` (`git-guard`) and `SPEC.md:200-201` (preflight/worktree utility skills).
 
