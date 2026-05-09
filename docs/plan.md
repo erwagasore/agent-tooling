@@ -30,7 +30,7 @@ Cycle goal: broaden automated coverage across the remaining under-tested extensi
 
 ## Phase 2 — Command phase coverage
 
-- [ ] **`test(extensions): cover git-ship command phases`**
+- [x] **`test(extensions): cover git-ship command phases`**
 
   Expand beyond `detectShipState()` and test command/phase behavior in `pi-extensions/git-ship/index.ts`: status-only mode, default-clean/default-dirty messages, no-pr push confirmation/cancel path, no-pr dirty guard, pr-open output, pr-closed warning, and pr-merged branch cleanup command sequence where practical. This anchors to `SPEC.md:117` (`git-ship`) and `SPEC.md:237` (canonical `/ship`).
 
