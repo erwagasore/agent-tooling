@@ -78,10 +78,12 @@ async function validateBranchName(
 	signal?: AbortSignal,
 ): Promise<{ ok: boolean; reason?: string }> {
 	if (!branchName) return { ok: false, reason: "branch name is empty" };
-	if (branchName.trim() !== branchName) return { ok: false, reason: "branch name has leading or trailing whitespace" };
+	if (branchName.trim() !== branchName)
+		return { ok: false, reason: "branch name has leading or trailing whitespace" };
 	if (/\s/.test(branchName)) return { ok: false, reason: "branch name cannot contain whitespace" };
 	const checked = await execLoud(exec, "git", ["check-ref-format", "--branch", branchName], signal);
-	if (!checked.ok) return { ok: false, reason: checked.out || "git check-ref-format rejected the branch name" };
+	if (!checked.ok)
+		return { ok: false, reason: checked.out || "git check-ref-format rejected the branch name" };
 	return { ok: true };
 }
 
@@ -175,16 +177,7 @@ async function wtNew(
 	const created = await execLoud(
 		exec,
 		"git",
-		[
-			"-C",
-			mainPath,
-			"worktree",
-			"add",
-			worktreePath,
-			"-b",
-			branchName,
-			defaultBranch,
-		],
+		["-C", mainPath, "worktree", "add", worktreePath, "-b", branchName, defaultBranch],
 		signal,
 	);
 	if (!created.ok) {
@@ -199,11 +192,7 @@ async function wtNew(
 
 // ── /wt land ─────────────────────────────────────────────────
 
-async function wtLand(
-	exec: ExecRunner,
-	ctx: ExtensionCommandContext,
-	signal?: AbortSignal,
-): Promise<void> {
+async function wtLand(exec: ExecRunner, ctx: ExtensionCommandContext, signal?: AbortSignal): Promise<void> {
 	const mode = await detectMode(exec, signal);
 	if (mode !== "worktree") {
 		ctx.ui.notify(
@@ -270,7 +259,10 @@ interface WorktreeEntry {
 }
 
 function parseWorktreeList(out: string): WorktreeEntry[] {
-	const blocks = out.split("\n\n").map((b) => b.trim()).filter(Boolean);
+	const blocks = out
+		.split("\n\n")
+		.map((b) => b.trim())
+		.filter(Boolean);
 	return blocks.map((block) => {
 		const lines = block.split("\n");
 		const entry: WorktreeEntry = {
@@ -296,7 +288,7 @@ function formatWorktreeTable(entries: WorktreeEntry[]): string {
 	if (entries.length === 0) return "(no worktrees)";
 	const rows = entries.map((e) => ({
 		path: e.path,
-		ref: e.bare ? "(bare)" : e.detached ? `(detached @ ${e.head.slice(0, 7)})` : e.branch ?? "(unknown)",
+		ref: e.bare ? "(bare)" : e.detached ? `(detached @ ${e.head.slice(0, 7)})` : (e.branch ?? "(unknown)"),
 		head: e.head.slice(0, 7),
 	}));
 	const pathW = Math.max(4, ...rows.map((r) => r.path.length));
@@ -310,11 +302,7 @@ function formatWorktreeTable(entries: WorktreeEntry[]): string {
 	return `${header}\n${sep}\n${body}`;
 }
 
-async function wtList(
-	exec: ExecRunner,
-	ctx: ExtensionCommandContext,
-	signal?: AbortSignal,
-): Promise<void> {
+async function wtList(exec: ExecRunner, ctx: ExtensionCommandContext, signal?: AbortSignal): Promise<void> {
 	const out = await tryExec(exec, "git", ["worktree", "list", "--porcelain"], signal);
 	if (out === null) {
 		ctx.ui.notify("Not inside a git repository (or `git worktree list` failed).", "error");

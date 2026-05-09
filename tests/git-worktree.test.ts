@@ -11,7 +11,12 @@ import {
 	validateBranchName,
 } from "../pi-extensions/git-worktree/index.ts";
 
-function execFrom(handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean }): ExecRunner {
+function execFrom(
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
 		return {
@@ -33,13 +38,15 @@ describe("git-worktree helpers", () => {
 
 	it("extracts the main repo path from git worktree porcelain output", () => {
 		expect(
-			mainPathFromWorktreeList([
-				"worktree /repo/main",
-				"HEAD abcdef1234567890",
-				"branch refs/heads/main",
-				"",
-				"worktree /repo/feature",
-			].join("\n")),
+			mainPathFromWorktreeList(
+				[
+					"worktree /repo/main",
+					"HEAD abcdef1234567890",
+					"branch refs/heads/main",
+					"",
+					"worktree /repo/feature",
+				].join("\n"),
+			),
 		).toBe("/repo/main");
 		expect(mainPathFromWorktreeList("garbage")).toBeNull();
 	});

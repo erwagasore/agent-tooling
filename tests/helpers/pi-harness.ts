@@ -51,7 +51,9 @@ export function createMockPi(exec?: ExecRunner): MockPi {
 	return { pi, commands, tools };
 }
 
-export function createCommandContext(overrides: Partial<ExtensionCommandContext> = {}): ExtensionCommandContext {
+export function createCommandContext(
+	overrides: Partial<ExtensionCommandContext> = {},
+): ExtensionCommandContext {
 	return {
 		cwd: process.cwd(),
 		signal: undefined,

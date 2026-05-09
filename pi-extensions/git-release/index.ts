@@ -180,12 +180,7 @@ async function readReleasePlan(
 	override: Bump | undefined,
 	signal?: AbortSignal,
 ): Promise<ReleasePlan> {
-	const tagsOut = await tryExec(
-		exec,
-		"git",
-		["tag", "--list", "v*", "--sort=-version:refname"],
-		signal,
-	);
+	const tagsOut = await tryExec(exec, "git", ["tag", "--list", "v*", "--sort=-version:refname"], signal);
 	const latestTag = tagsOut?.split("\n")[0]?.trim() || null;
 	const currentVersion = (latestTag && parseSemver(latestTag)) || {
 		major: 0,
@@ -197,16 +192,13 @@ async function readReleasePlan(
 	const logOut = await tryExec(
 		exec,
 		"git",
-		[
-			"log",
-			"--reverse",
-			"--no-merges",
-			`--pretty=format:%H%x00%s%x00%b%x1e`,
-			range,
-		],
+		["log", "--reverse", "--no-merges", `--pretty=format:%H%x00%s%x00%b%x1e`, range],
 		signal,
 	);
-	const records = (logOut ?? "").split("\x1e").map((r) => r.trim()).filter(Boolean);
+	const records = (logOut ?? "")
+		.split("\x1e")
+		.map((r) => r.trim())
+		.filter(Boolean);
 	const commits = records.map(classifyCommit);
 
 	const computed = computeBump(commits);
@@ -291,8 +283,7 @@ async function tagExists(
 	tag: string,
 	signal?: AbortSignal,
 ): Promise<{ local: boolean; remote: boolean; remoteCheckOk: boolean }> {
-	const local =
-		(await tryExec(exec, "git", ["show-ref", "--verify", `refs/tags/${tag}`], signal)) !== null;
+	const local = (await tryExec(exec, "git", ["show-ref", "--verify", `refs/tags/${tag}`], signal)) !== null;
 	const remote = await execLoud(exec, "git", ["ls-remote", "--tags", "origin", tag], signal);
 	return { local, remote: remote.ok && !!remote.out.trim(), remoteCheckOk: remote.ok };
 }
@@ -336,9 +327,7 @@ async function preflightReleaseSafety(
 
 	const auth = await checkProviderAuth(exec, provider, signal);
 	if (!auth.ok) {
-		failures.push(
-			`Provider auth check failed for ${provider}: ${auth.message ?? "unknown error"}`,
-		);
+		failures.push(`Provider auth check failed for ${provider}: ${auth.message ?? "unknown error"}`);
 	} else if (provider !== "github" && provider !== "gitlab") {
 		warnings.push(
 			`Provider \`${provider}\` does not support automated release publishing; /release will push the tag but skip host release notes.`,
@@ -348,7 +337,11 @@ async function preflightReleaseSafety(
 	return { ok: failures.length === 0, failures, warnings };
 }
 
-function formatRecoverySteps(versionStr: string, defaultBranch: string, phase: "commit" | "tag" | "push" | "provider-release"): string {
+function formatRecoverySteps(
+	versionStr: string,
+	defaultBranch: string,
+	phase: "commit" | "tag" | "push" | "provider-release",
+): string {
 	const pushCmd = `git push origin ${defaultBranch} --follow-tags`;
 	if (phase === "commit") {
 		return [
@@ -566,7 +559,7 @@ const GENERIC_VERSION_PATTERNS: GenericVersionPattern[] = [
 function matchUniqueVersion(raw: string, pattern: RegExp): RegExpMatchArray | null {
 	pattern.lastIndex = 0;
 	const matches = Array.from(raw.matchAll(pattern));
-	return matches.length === 1 ? matches[0] ?? null : null;
+	return matches.length === 1 ? (matches[0] ?? null) : null;
 }
 
 function createGenericManifestAdapter(
@@ -612,7 +605,10 @@ function ecosystemForPath(path: string): string | undefined {
 
 async function detectProjectProfile(repoRoot: string): Promise<ProjectProfile> {
 	const entries = await readRootEntries(repoRoot);
-	const files = entries.filter((e) => e.isFile()).map((e) => e.name).sort();
+	const files = entries
+		.filter((e) => e.isFile())
+		.map((e) => e.name)
+		.sort();
 	const ecosystems = Array.from(
 		new Set(files.map((f) => ecosystemForPath(f)).filter((v): v is string => !!v)),
 	).sort();
@@ -696,10 +692,7 @@ async function prependChangelog(repoRoot: string, section: string): Promise<void
 		next = `# Changelog\n\n${section}\n`;
 	} else if (/^# Changelog\b/m.test(existing)) {
 		// Insert after the top-level header
-		next = existing.replace(
-			/(^# Changelog[^\n]*\n+)/,
-			`$1${section}\n\n`,
-		);
+		next = existing.replace(/(^# Changelog[^\n]*\n+)/, `$1${section}\n\n`);
 	} else {
 		// No top-level header: prepend one
 		next = `# Changelog\n\n${section}\n\n${existing}`;
@@ -763,12 +756,18 @@ async function executeRelease(
 		signal,
 	);
 	if (!stage.ok) {
-		ctx.ui.notify(`git add failed:\n${stage.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`, "error");
+		ctx.ui.notify(
+			`git add failed:\n${stage.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`,
+			"error",
+		);
 		return;
 	}
 	const commit = await execLoud(exec, "git", ["commit", "-m", `chore: release ${versionStr}`], signal);
 	if (!commit.ok) {
-		ctx.ui.notify(`git commit failed:\n${commit.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`, "error");
+		ctx.ui.notify(
+			`git commit failed:\n${commit.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "commit")}`,
+			"error",
+		);
 		return;
 	}
 	console.log(commit.out);
@@ -776,7 +775,10 @@ async function executeRelease(
 	// 5. Tag annotated
 	const tag = await execLoud(exec, "git", ["tag", "-a", versionStr, "-m", versionStr], signal);
 	if (!tag.ok) {
-		ctx.ui.notify(`git tag failed:\n${tag.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "tag")}`, "error");
+		ctx.ui.notify(
+			`git tag failed:\n${tag.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "tag")}`,
+			"error",
+		);
 		return;
 	}
 	console.log(`Tagged ${versionStr}`);
@@ -795,14 +797,12 @@ async function executeRelease(
 	}
 
 	// 7. Push
-	const push = await execLoud(
-		exec,
-		"git",
-		["push", "origin", defaultBranch, "--follow-tags"],
-		signal,
-	);
+	const push = await execLoud(exec, "git", ["push", "origin", defaultBranch, "--follow-tags"], signal);
 	if (!push.ok) {
-		ctx.ui.notify(`git push failed:\n${push.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "push")}`, "error");
+		ctx.ui.notify(
+			`git push failed:\n${push.out}\n\n${formatRecoverySteps(versionStr, defaultBranch, "push")}`,
+			"error",
+		);
 		return;
 	}
 	console.log(push.out);
@@ -872,13 +872,10 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 			const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
 			const hasRemote = remoteUrl !== null;
 			const provider = detectProvider(remoteUrl);
-			const currentBranch =
-				(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
+			const currentBranch = (await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
 			const defaultBranch = await detectDefaultBranch(exec, signal);
 			const status = await tryExec(exec, "git", ["status", "--porcelain"], signal);
-			const repoRoot =
-				(await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal)) ??
-				ctx.cwd;
+			const repoRoot = (await tryExec(exec, "git", ["rev-parse", "--show-toplevel"], signal)) ?? ctx.cwd;
 
 			if (currentBranch !== defaultBranch) {
 				ctx.ui.notify(
@@ -888,10 +885,7 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 				return;
 			}
 			if (!isStatus && status !== "") {
-				ctx.ui.notify(
-					"Working tree is dirty. Commit or stash before releasing.",
-					"error",
-				);
+				ctx.ui.notify("Working tree is dirty. Commit or stash before releasing.", "error");
 				return;
 			}
 

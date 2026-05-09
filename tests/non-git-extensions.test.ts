@@ -16,24 +16,23 @@ function createCommandPi() {
 	return { pi, commands, sent };
 }
 
-function createPlanCtx(opts: {
-	active?: boolean;
-	choice?: string;
-	freshSent?: string[];
-} = {}) {
+function createPlanCtx(opts: { active?: boolean; choice?: string; freshSent?: string[] } = {}) {
 	const freshSent = opts.freshSent ?? [];
 	return {
 		sessionManager: {
-			getEntries: () =>
-				opts.active
-					? [{ type: "message", message: { role: "user", content: "hello" } }]
-					: [],
+			getEntries: () => (opts.active ? [{ type: "message", message: { role: "user", content: "hello" } }] : []),
 			getSessionFile: () => "/tmp/session.json",
 		},
 		ui: {
 			select: async () => opts.choice,
 		},
-		newSession: async ({ parentSession, withSession }: { parentSession?: string; withSession: (ctx: any) => Promise<void> }) => {
+		newSession: async ({
+			parentSession,
+			withSession,
+		}: {
+			parentSession?: string;
+			withSession: (ctx: any) => Promise<void>;
+		}) => {
 			expect(parentSession).toBe("/tmp/session.json");
 			await withSession({
 				sendUserMessage: async (message: string) => {

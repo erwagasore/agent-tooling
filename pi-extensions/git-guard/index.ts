@@ -23,11 +23,7 @@ import {
 
 // ── Public types ─────────────────────────────────────────────
 
-export type GuardCheck =
-	| "requireClean"
-	| "requireRemote"
-	| "requireBranch"
-	| "requireMode";
+export type GuardCheck = "requireClean" | "requireRemote" | "requireBranch" | "requireMode";
 
 export interface GuardFailure {
 	check: GuardCheck;
@@ -52,23 +48,17 @@ const PARAMS = Type.Object({
 	requireClean: Type.Optional(
 		Type.Boolean({ description: "Require working tree to have no uncommitted changes." }),
 	),
-	requireRemote: Type.Optional(
-		Type.Boolean({ description: "Require an `origin` remote to be configured." }),
-	),
+	requireRemote: Type.Optional(Type.Boolean({ description: "Require an `origin` remote to be configured." })),
 	requireBranch: Type.Optional(
-		Type.Union(
-			[Type.Literal("default"), Type.Literal("non-default")],
-			{
-				description:
-					"Require the current branch to be the default branch (`default`) or any other branch (`non-default`).",
-			},
-		),
+		Type.Union([Type.Literal("default"), Type.Literal("non-default")], {
+			description:
+				"Require the current branch to be the default branch (`default`) or any other branch (`non-default`).",
+		}),
 	),
 	requireMode: Type.Optional(
-		Type.Union(
-			[Type.Literal("branch"), Type.Literal("worktree")],
-			{ description: "Require the repo to be in regular branch or linked-worktree mode." },
-		),
+		Type.Union([Type.Literal("branch"), Type.Literal("worktree")], {
+			description: "Require the repo to be in regular branch or linked-worktree mode.",
+		}),
 	),
 });
 export type GitGuardParams = Static<typeof PARAMS>;
@@ -78,8 +68,7 @@ export type GitGuardParams = Static<typeof PARAMS>;
 async function readState(exec: ExecRunner, signal?: AbortSignal): Promise<GuardState> {
 	const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
 	const status = await tryExec(exec, "git", ["status", "--porcelain"], signal);
-	const currentBranch =
-		(await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
+	const currentBranch = (await tryExec(exec, "git", ["branch", "--show-current"], signal)) ?? "";
 	const defaultBranch = await detectDefaultBranch(exec, signal);
 	const mode = await detectMode(exec, signal);
 
@@ -146,14 +135,10 @@ function evaluateChecks(opts: GitGuardParams, state: GuardState): GuardFailure[]
 }
 
 function formatSummary(result: GitGuardResult, opts: GitGuardParams): string {
-	const requested = (Object.keys(opts) as Array<keyof GitGuardParams>).filter(
-		(k) => opts[k] !== undefined,
-	);
+	const requested = (Object.keys(opts) as Array<keyof GitGuardParams>).filter((k) => opts[k] !== undefined);
 
 	if (result.ok) {
-		const passed = requested.length
-			? requested.map((k) => `  ✓ ${k}`).join("\n")
-			: "  (no checks requested)";
+		const passed = requested.length ? requested.map((k) => `  ✓ ${k}`).join("\n") : "  (no checks requested)";
 		return `Guard OK\n${passed}`;
 	}
 
@@ -178,8 +163,7 @@ export default function gitGuardExtension(pi: ExtensionAPI) {
 		label: "Git Guard",
 		description:
 			"Assert one or more requirements about the current git repo: clean tree, remote present, on/off default branch, branch-vs-worktree mode. Returns isError: true with a structured `failures` array when any required check fails. Checks not specified in args are skipped.",
-		promptSnippet:
-			"Assert repo state at the start of a workflow (clean, remote, branch, mode). Fails closed.",
+		promptSnippet: "Assert repo state at the start of a workflow (clean, remote, branch, mode). Fails closed.",
 		promptGuidelines: [
 			"Use git_guard at the start of any git workflow that has preconditions — it replaces the paired check-preflight and check-worktree skills.",
 			"Pass only the checks you need; omitted opts are skipped, not enforced.",

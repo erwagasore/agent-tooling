@@ -7,7 +7,12 @@ import {
 	type ExecRunner,
 } from "../pi-extensions/_shared/git-internals.ts";
 
-function execFrom(handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean }): ExecRunner {
+function execFrom(
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
 		return {
@@ -55,9 +60,7 @@ describe("git internals", () => {
 				"1",
 			]);
 			return {
-				stdout: JSON.stringify([
-					{ number: 42, url: "https://github.com/o/r/pull/42", state: "MERGED" },
-				]),
+				stdout: JSON.stringify([{ number: 42, url: "https://github.com/o/r/pull/42", state: "MERGED" }]),
 			};
 		});
 
@@ -71,15 +74,7 @@ describe("git internals", () => {
 	it("findExistingPr parses GitLab MR JSON and normalizes state", async () => {
 		const exec = execFrom((cmd, args) => {
 			expect(cmd).toBe("glab");
-			expect(args).toEqual([
-				"mr",
-				"list",
-				"--source-branch",
-				"feat/foo",
-				"--all",
-				"--output",
-				"json",
-			]);
+			expect(args).toEqual(["mr", "list", "--source-branch", "feat/foo", "--all", "--output", "json"]);
 			return {
 				stdout: JSON.stringify([
 					{ iid: 7, web_url: "https://gitlab.com/o/r/-/merge_requests/7", state: "closed" },

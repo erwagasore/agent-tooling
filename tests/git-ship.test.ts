@@ -19,7 +19,10 @@ function ctx(overrides: Partial<ShipContext> = {}): ShipContext {
 }
 
 function execFrom(
-	handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
 ): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
@@ -32,20 +35,23 @@ function execFrom(
 	};
 }
 
-function shipRepoExec(opts: {
-	remoteUrl?: string | null;
-	status?: string;
-	currentBranch?: string;
-	defaultBranch?: string;
-	mode?: "branch" | "worktree";
-	existingPr?: Array<{ number?: number; url?: string; state?: string }> | null;
-	commits?: string;
-	diffStat?: string;
-	remoteHead?: string;
-	pushOut?: string;
-	createOut?: string;
-	branchDeleteFails?: boolean;
-} = {}, calls: string[][] = []): ExecRunner {
+function shipRepoExec(
+	opts: {
+		remoteUrl?: string | null;
+		status?: string;
+		currentBranch?: string;
+		defaultBranch?: string;
+		mode?: "branch" | "worktree";
+		existingPr?: Array<{ number?: number; url?: string; state?: string }> | null;
+		commits?: string;
+		diffStat?: string;
+		remoteHead?: string;
+		pushOut?: string;
+		createOut?: string;
+		branchDeleteFails?: boolean;
+	} = {},
+	calls: string[][] = [],
+): ExecRunner {
 	const remoteUrl = opts.remoteUrl === undefined ? "git@github.com:owner/repo.git" : opts.remoteUrl;
 	const status = opts.status ?? "";
 	const currentBranch = opts.currentBranch ?? "feat/foo";
@@ -118,11 +124,9 @@ function shipRepoExec(opts: {
 	});
 }
 
-function createShipContext(opts: {
-	confirm?: boolean;
-	input?: string;
-	notifications?: Array<{ level: string; message: string }>;
-} = {}) {
+function createShipContext(
+	opts: { confirm?: boolean; input?: string; notifications?: Array<{ level: string; message: string }> } = {},
+) {
 	const notifications = opts.notifications ?? [];
 	return {
 		cwd: process.cwd(),
@@ -162,15 +166,15 @@ afterEach(() => {
 
 describe("git-ship state detection", () => {
 	it("detects clean default branch as nothing to ship", () => {
-		expect(
-			detectShipState(ctx({ currentBranch: "main", defaultBranch: "main", isClean: true })),
-		).toBe("default-clean");
+		expect(detectShipState(ctx({ currentBranch: "main", defaultBranch: "main", isClean: true }))).toBe(
+			"default-clean",
+		);
 	});
 
 	it("detects dirty default branch as branch-needed state", () => {
-		expect(
-			detectShipState(ctx({ currentBranch: "main", defaultBranch: "main", isClean: false })),
-		).toBe("default-dirty");
+		expect(detectShipState(ctx({ currentBranch: "main", defaultBranch: "main", isClean: false }))).toBe(
+			"default-dirty",
+		);
 	});
 
 	it("detects feature branch without PR as no-pr", () => {
@@ -179,19 +183,13 @@ describe("git-ship state detection", () => {
 
 	it("detects open, merged, and closed PR states", () => {
 		expect(
-			detectShipState(
-				ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "open" } }),
-			),
+			detectShipState(ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "open" } })),
 		).toBe("pr-open");
 		expect(
-			detectShipState(
-				ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "merged" } }),
-			),
+			detectShipState(ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "merged" } })),
 		).toBe("pr-merged");
 		expect(
-			detectShipState(
-				ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "closed" } }),
-			),
+			detectShipState(ctx({ existingPr: { number: 1, url: "https://example.com/pr/1", state: "closed" } })),
 		).toBe("pr-closed");
 	});
 
@@ -268,13 +266,20 @@ describe("git-ship command phases", () => {
 		const calls: string[][] = [];
 		const notifications: Array<{ level: string; message: string }> = [];
 		await runShip(
-			shipRepoExec({ existingPr: [], currentBranch: "feat/foo", createOut: "https://github.com/owner/repo/pull/99\n" }, calls),
+			shipRepoExec(
+				{ existingPr: [], currentBranch: "feat/foo", createOut: "https://github.com/owner/repo/pull/99\n" },
+				calls,
+			),
 			"",
 			createShipContext({ confirm: true, input: "feat: add foo", notifications }),
 		);
 
 		expect(calls.some((c) => c.join(" ") === "git push -u origin feat/foo")).toBe(true);
-		expect(calls.some((c) => c.join(" ").startsWith("gh pr create --base main --head feat/foo --title feat: add foo"))).toBe(true);
+		expect(
+			calls.some((c) =>
+				c.join(" ").startsWith("gh pr create --base main --head feat/foo --title feat: add foo"),
+			),
+		).toBe(true);
 		expect(notifications).toContainEqual({
 			level: "info",
 			message: "PR #99 opened — https://github.com/owner/repo/pull/99",

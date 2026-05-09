@@ -14,6 +14,7 @@
     "typebox": "^1.1.38"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
     "@mariozechner/pi-coding-agent": "^0.73.1",
     "@types/node": "^25.6.2",
     "typescript": "^6.0.3",
@@ -24,6 +25,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "verify": "npm run typecheck && npm test"
+    "verify": "npm run typecheck && npm run format:check && npm test",
+    "format": "biome format --write pi-extensions tests",
+    "format:check": "biome format pi-extensions tests"
   }
 }

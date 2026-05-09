@@ -22,7 +22,12 @@ import gitReleaseExtension, {
 import type { ExecRunner } from "../pi-extensions/_shared/git-internals.ts";
 import { createMockPi } from "./helpers/pi-harness.ts";
 
-function execFrom(handler: (cmd: string, args: string[]) => { stdout?: string; stderr?: string; code?: number; killed?: boolean }): ExecRunner {
+function execFrom(
+	handler: (
+		cmd: string,
+		args: string[],
+	) => { stdout?: string; stderr?: string; code?: number; killed?: boolean },
+): ExecRunner {
 	return async (cmd, args) => {
 		const r = handler(cmd, args);
 		return {
@@ -43,15 +48,11 @@ describe("git-release helpers", () => {
 	});
 
 	it("requires BREAKING CHANGE markers to start their own body line", () => {
-		const realFooter = classifyCommit(
-			"a1\x00feat: add new API\x00Details.\n\nBREAKING CHANGE: remove old API",
-		);
+		const realFooter = classifyCommit("a1\x00feat: add new API\x00Details.\n\nBREAKING CHANGE: remove old API");
 		const midLineMention = classifyCommit(
 			"a2\x00feat: document release rules\x00- `feat!` and `BREAKING CHANGE:`-in-body both trigger major.",
 		);
-		const hyphenatedFooter = classifyCommit(
-			"a3\x00feat: add new API\x00BREAKING-CHANGE: remove old API",
-		);
+		const hyphenatedFooter = classifyCommit("a3\x00feat: add new API\x00BREAKING-CHANGE: remove old API");
 		const markdownTableMention = classifyCommit(
 			"a4\x00feat: document release rules\x00| `feat!:` or `BREAKING CHANGE` in body | major |",
 		);
@@ -63,10 +64,7 @@ describe("git-release helpers", () => {
 	});
 
 	it("computes bump from classified commits", () => {
-		const commits = [
-			classifyCommit("f1\x00fix: patch bug\x00"),
-			classifyCommit("f2\x00feat: add feature\x00"),
-		];
+		const commits = [classifyCommit("f1\x00fix: patch bug\x00"), classifyCommit("f2\x00feat: add feature\x00")];
 		expect(computeBump(commits)).toBe("minor");
 		expect(computeBump([classifyCommit("d1\x00docs: update readme\x00")])).toBe("none");
 		expect(computeBump([classifyCommit("b1\x00feat!: break API\x00")])).toBe("major");
@@ -126,45 +124,99 @@ describe("git-release helpers", () => {
 			out: "",
 			files: ["CHANGELOG.md", "package.json", "Cargo.toml", "pyproject.toml"],
 		});
-		expect(calls).toEqual([["git", "add", "--", "CHANGELOG.md", "package.json", "Cargo.toml", "pyproject.toml"]]);
+		expect(calls).toEqual([
+			["git", "add", "--", "CHANGELOG.md", "package.json", "Cargo.toml", "pyproject.toml"],
+		]);
 	});
 
 	it("detects and bumps manifests by language ecosystem", async () => {
 		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
-		await writeFile(join(repo, "package.json"), JSON.stringify({ name: "demo", version: "0.1.0" }, null, 2) + "\n");
+		await writeFile(
+			join(repo, "package.json"),
+			JSON.stringify({ name: "demo", version: "0.1.0" }, null, 2) + "\n",
+		);
 		await writeFile(
 			join(repo, "package-lock.json"),
-			JSON.stringify({ name: "demo", version: "0.1.0", packages: { "": { name: "demo", version: "0.1.0" } } }, null, 2) + "\n",
+			JSON.stringify(
+				{ name: "demo", version: "0.1.0", packages: { "": { name: "demo", version: "0.1.0" } } },
+				null,
+				2,
+			) + "\n",
 		);
-		await writeFile(join(repo, "Cargo.toml"), "[package]\nname = \"demo\"\nversion = \"0.1.0\"\n");
-		await writeFile(join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\nversion = \"0.1.0\"\n");
-		await writeFile(join(repo, "build.zig.zon"), ".{\n    .name = .demo,\n    .version = \"0.1.0\",\n}\n");
-		await writeFile(join(repo, "mix.exs"), "def project do\n  [app: :demo, version: \"0.1.0\", elixir: \"~> 1.16\"]\nend\n");
+		await writeFile(join(repo, "Cargo.toml"), '[package]\nname = "demo"\nversion = "0.1.0"\n');
+		await writeFile(join(repo, "pyproject.toml"), '[project]\nname = "demo"\nversion = "0.1.0"\n');
+		await writeFile(join(repo, "build.zig.zon"), '.{\n    .name = .demo,\n    .version = "0.1.0",\n}\n');
+		await writeFile(
+			join(repo, "mix.exs"),
+			'def project do\n  [app: :demo, version: "0.1.0", elixir: "~> 1.16"]\nend\n',
+		);
 
 		const results = await bumpManifests(repo, { major: 0, minor: 2, patch: 0 });
 
 		expect(results).toEqual([
-			{ language: "JavaScript/TypeScript", name: "package.json", path: "package.json", versionBefore: "0.1.0", updated: true, reason: undefined },
-			{ language: "JavaScript/TypeScript", name: "package-lock.json", path: "package-lock.json", versionBefore: "0.1.0", updated: true, reason: undefined },
-			{ language: "Rust", name: "Cargo.toml", path: "Cargo.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
-			{ language: "Python", name: "pyproject.toml", path: "pyproject.toml", versionBefore: "0.1.0", updated: true, reason: undefined },
-			{ language: "Zig", name: "build.zig.zon", path: "build.zig.zon", versionBefore: "0.1.0", updated: true, reason: undefined },
-			{ language: "Elixir", name: "mix.exs", path: "mix.exs", versionBefore: "0.1.0", updated: true, reason: undefined },
+			{
+				language: "JavaScript/TypeScript",
+				name: "package.json",
+				path: "package.json",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
+			{
+				language: "JavaScript/TypeScript",
+				name: "package-lock.json",
+				path: "package-lock.json",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
+			{
+				language: "Rust",
+				name: "Cargo.toml",
+				path: "Cargo.toml",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
+			{
+				language: "Python",
+				name: "pyproject.toml",
+				path: "pyproject.toml",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
+			{
+				language: "Zig",
+				name: "build.zig.zon",
+				path: "build.zig.zon",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
+			{
+				language: "Elixir",
+				name: "mix.exs",
+				path: "mix.exs",
+				versionBefore: "0.1.0",
+				updated: true,
+				reason: undefined,
+			},
 		]);
 		expect(JSON.parse(await readFile(join(repo, "package.json"), "utf8"))).toMatchObject({ version: "0.2.0" });
 		expect(JSON.parse(await readFile(join(repo, "package-lock.json"), "utf8"))).toMatchObject({
 			version: "0.2.0",
 			packages: { "": { version: "0.2.0" } },
 		});
-		expect(await readFile(join(repo, "Cargo.toml"), "utf8")).toContain("version = \"0.2.0\"");
-		expect(await readFile(join(repo, "pyproject.toml"), "utf8")).toContain("version = \"0.2.0\"");
-		expect(await readFile(join(repo, "build.zig.zon"), "utf8")).toContain(".version = \"0.2.0\"");
-		expect(await readFile(join(repo, "mix.exs"), "utf8")).toContain("version: \"0.2.0\"");
+		expect(await readFile(join(repo, "Cargo.toml"), "utf8")).toContain('version = "0.2.0"');
+		expect(await readFile(join(repo, "pyproject.toml"), "utf8")).toContain('version = "0.2.0"');
+		expect(await readFile(join(repo, "build.zig.zon"), "utf8")).toContain('.version = "0.2.0"');
+		expect(await readFile(join(repo, "mix.exs"), "utf8")).toContain('version: "0.2.0"');
 	});
 
 	it("detects project ecosystems from root marker files", async () => {
 		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
-		await writeFile(join(repo, "mix.exs"), "def project, do: [version: \"0.1.0\"]\n");
+		await writeFile(join(repo, "mix.exs"), 'def project, do: [version: "0.1.0"]\n');
 		await writeFile(join(repo, "go.mod"), "module example.com/demo\n");
 		await writeFile(join(repo, "demo.gemspec"), "Gem::Specification.new do |s|\nend\n");
 
@@ -177,20 +229,17 @@ describe("git-release helpers", () => {
 
 	it("skips generic fallback files when version fields are ambiguous", async () => {
 		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
-		await writeFile(
-			join(repo, "custom.toml"),
-			"version = \"0.1.0\"\n[dependency]\nversion = \"9.9.9\"\n",
-		);
+		await writeFile(join(repo, "custom.toml"), 'version = "0.1.0"\n[dependency]\nversion = "9.9.9"\n');
 
 		await expect(bumpManifests(repo, { major: 0, minor: 2, patch: 0 })).resolves.toEqual([]);
-		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain("version = \"0.1.0\"");
-		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain("version = \"9.9.9\"");
+		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain('version = "0.1.0"');
+		expect(await readFile(join(repo, "custom.toml"), "utf8")).toContain('version = "9.9.9"');
 	});
 
 	it("reports detected manifests without writable versions", async () => {
 		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
 		await writeFile(join(repo, "package.json"), JSON.stringify({ name: "demo" }, null, 2) + "\n");
-		await writeFile(join(repo, "pyproject.toml"), "[project]\nname = \"demo\"\ndynamic = [\"version\"]\n");
+		await writeFile(join(repo, "pyproject.toml"), '[project]\nname = "demo"\ndynamic = ["version"]\n');
 
 		const results = await bumpManifests(repo, { major: 1, minor: 0, patch: 0 });
 
@@ -221,7 +270,13 @@ describe("git-release helpers", () => {
 		expect(
 			formatManifestBumpSummary(
 				[
-					{ language: "JavaScript/TypeScript", name: "package.json", path: "package.json", versionBefore: "1.0.0", updated: true },
+					{
+						language: "JavaScript/TypeScript",
+						name: "package.json",
+						path: "package.json",
+						versionBefore: "1.0.0",
+						updated: true,
+					},
 					{
 						language: "Python",
 						name: "pyproject.toml",
@@ -296,7 +351,9 @@ describe("git-release helpers", () => {
 		const safety = await preflightReleaseSafety(exec, "v0.9.0", "github", false);
 
 		expect(safety.ok).toBe(false);
-		expect(safety.failures).toContain("No `origin` remote is configured; release cannot push tags or publish host notes.");
+		expect(safety.failures).toContain(
+			"No `origin` remote is configured; release cannot push tags or publish host notes.",
+		);
 		expect(safety.failures).toContain("Local tag v0.9.0 already exists.");
 		expect(safety.failures).toContain("Remote tag v0.9.0 already exists on origin.");
 		expect(safety.failures).toContain("Provider auth check failed for github: not authenticated");
@@ -322,7 +379,9 @@ describe("git-release helpers", () => {
 		expect(formatRecoverySteps("v0.9.0", "main", "commit")).toContain("Inspect with `git status`");
 		expect(formatRecoverySteps("v0.9.0", "main", "tag")).toContain("git tag -a v0.9.0 -m v0.9.0");
 		expect(formatRecoverySteps("v0.9.0", "main", "push")).toContain("git push origin main --follow-tags");
-		expect(formatRecoverySteps("v0.9.0", "main", "provider-release")).toContain("host release notes were not published");
+		expect(formatRecoverySteps("v0.9.0", "main", "provider-release")).toContain(
+			"host release notes were not published",
+		);
 	});
 
 	it("registers the /release command through the committed test harness", () => {
