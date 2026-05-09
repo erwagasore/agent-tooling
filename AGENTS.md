@@ -51,7 +51,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/create-release/` — create-release: version, changelog, tag and push a release locally (human-facing doc for `/release`)
 - `skills/create-skill/` — create-skill: scaffold a new pi skill following the standard architecture
 - `skills/detect-default-branch/` — detect-default-branch: detect the default branch of the current repo
-- `skills/detect-existing-pr/` — detect-existing-pr: check whether an open PR already exists for the current branch
+- `skills/detect-existing-pr/` — detect-existing-pr: report the latest PR for the current branch in any state (open / merged / closed)
 - `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/promote-plan/` — promote-plan: promote completed `docs/plan.md` into SPEC.md and reset for the next cycle
@@ -59,6 +59,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/stress-test-spec/` — stress-test-spec: stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
 - `skills/sync-docs/templates/` — document templates (README, AGENTS, SPEC, REFERENCE, LICENSE, docs/index, CONTRIBUTING)
+- `tests/` — Vitest coverage for deterministic extension behaviour
 
 ## Merge strategy
 
