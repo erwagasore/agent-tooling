@@ -4,10 +4,11 @@ Operating rules for humans + AI.
 
 ## Workflow
 
-- Never commit to `main`/`master`.
-- Always start on a new branch.
+- Never commit to `main`/`master` for normal feature/docs work.
+- Always start normal work on a new branch.
 - Only push after the user approves.
-- Merge via PR.
+- Merge normal work via PR.
+- Exceptions are explicit and narrow: first-time `/bootstrap-project` setup may create the initial repo/docs commits on the default branch before PR workflow exists; `/release` may create the release commit/tag on the default branch after confirmation.
 
 ## Commits
 
@@ -23,7 +24,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - Semantic versioning.
 - Versions derived from Conventional Commits.
 - Release performed locally via `/release` (no CI required); the `create-release` skill is the human-facing doc for this command.
-- `/release` is the explicit direct-to-default exception: after user confirmation it may commit `chore: release vX.Y.Z`, create tag `vX.Y.Z`, and push the default branch with `--follow-tags`.
+- `/release` is the explicit release direct-to-default exception: after user confirmation it may commit `chore: release vX.Y.Z`, create tag `vX.Y.Z`, and push the default branch with `--follow-tags`.
 - Manifest (if present) is source of truth.
 - Tags: vX.Y.Z
 

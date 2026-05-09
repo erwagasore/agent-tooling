@@ -30,7 +30,7 @@ Cycle goal: reconcile the remaining skill/docs drift so the public workflow docs
 
   *Done when:* cleanup docs no longer imply unsafe/direct `cd` behavior and point users toward `/ship` or `/wt land` for worktree cleanup.
 
-- [ ] **`docs(skills): clarify init-repo provider support`**
+- [x] **`docs(skills): clarify init-repo provider support`**
 
   Clarify `skills/init-repo/SKILL.md` provider support versus the implemented `git-*` surface. Current docs mention Codeberg/Gitea while most extensions only support GitHub/GitLab for automated PR/release publishing and detect Bitbucket without publishing support. This anchors to `SPEC.md:135` (`git-pr`), `SPEC.md:153` (`git-release`), and `SPEC.md:207` (Workflow skills).
 
