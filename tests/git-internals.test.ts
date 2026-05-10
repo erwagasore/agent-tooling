@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
 import {
+	buildCreatePrArgs,
 	createPr,
 	detectProvider,
 	findExistingPr,
 	tryExec,
+	withBodyFile,
 	type ExecRunner,
 } from "../pi-extensions/_shared/git-internals.ts";
 
@@ -99,66 +102,141 @@ describe("git internals", () => {
 		expect(warnings).toEqual(["Provider bitbucket not supported for PR detection"]);
 	});
 
-	it("createPr invokes gh and parses the created PR URL", async () => {
-		let called = false;
+	it("buildCreatePrArgs uses --body-file for gh when a body file is provided", () => {
+		expect(
+			buildCreatePrArgs(
+				"github",
+				{ base: "main", head: "feat/foo", title: "feat: add foo", body: "body", draft: true },
+				"/tmp/body.md",
+			),
+		).toEqual([
+			"pr",
+			"create",
+			"--base",
+			"main",
+			"--head",
+			"feat/foo",
+			"--title",
+			"feat: add foo",
+			"--body-file",
+			"/tmp/body.md",
+			"--draft",
+		]);
+	});
+
+	it("buildCreatePrArgs uses --description-file for glab when a body file is provided", () => {
+		expect(
+			buildCreatePrArgs(
+				"gitlab",
+				{ base: "main", head: "feat/foo", title: "feat: add foo", body: "body" },
+				"/tmp/body.md",
+			),
+		).toEqual([
+			"mr",
+			"create",
+			"--target-branch",
+			"main",
+			"--source-branch",
+			"feat/foo",
+			"--title",
+			"feat: add foo",
+			"--description-file",
+			"/tmp/body.md",
+			"--yes",
+		]);
+	});
+
+	it("buildCreatePrArgs omits the body flag when no body file is provided", () => {
+		const gh = buildCreatePrArgs("github", { base: "main", head: "feat/foo", title: "feat: add foo" }, null);
+		expect(gh).not.toContain("--body-file");
+		expect(gh).not.toContain("--body");
+
+		const glab = buildCreatePrArgs("gitlab", { base: "main", head: "feat/foo", title: "feat: add foo" }, null);
+		expect(glab).not.toContain("--description-file");
+		expect(glab).not.toContain("--description");
+	});
+
+	it("withBodyFile writes content and cleans up afterwards", async () => {
+		const seenPath = await withBodyFile("hello body", async (path) => {
+			expect(path).not.toBeNull();
+			const contents = await readFile(path as string, "utf8");
+			expect(contents).toBe("hello body");
+			return path as string;
+		});
+		await expect(readFile(seenPath, "utf8")).rejects.toThrow();
+	});
+
+	it("withBodyFile passes null for empty bodies and creates no file", async () => {
+		let observed: string | null = "unset";
+		await withBodyFile("", async (path) => {
+			observed = path;
+		});
+		expect(observed).toBeNull();
+	});
+
+	it("createPr invokes gh with --body-file and parses the created PR URL", async () => {
+		let observedBody: string | null = null;
+		let observedArgs: string[] | null = null;
 		const exec = execFrom((cmd, args) => {
-			called = true;
 			expect(cmd).toBe("gh");
-			expect(args).toEqual([
-				"pr",
-				"create",
-				"--base",
-				"main",
-				"--head",
-				"feat/foo",
-				"--title",
-				"feat: add foo",
-				"--body",
-				"body",
-				"--draft",
-			]);
-			return { stdout: "https://github.com/o/r/pull/123\n" };
+			observedArgs = args;
+			const flagIndex = args.indexOf("--body-file");
+			expect(flagIndex).toBeGreaterThan(-1);
+			const bodyFilePath = args[flagIndex + 1];
+			expect(typeof bodyFilePath).toBe("string");
+			return {
+				stdout: "https://github.com/o/r/pull/123\n",
+				__bodyFilePath: bodyFilePath,
+			} as { stdout: string; __bodyFilePath?: string };
 		});
 
+		// Wrap exec to read the body file before the temp dir is removed.
+		const readingExec: ExecRunner = async (cmd, args, opts) => {
+			const flagIndex = args.indexOf("--body-file");
+			if (flagIndex !== -1) observedBody = await readFile(args[flagIndex + 1] as string, "utf8");
+			return await exec(cmd, args, opts);
+		};
+
 		await expect(
-			createPr(exec, "github", {
+			createPr(readingExec, "github", {
 				base: "main",
 				head: "feat/foo",
 				title: "feat: add foo",
-				body: "body",
+				body: "multi\nline body",
 				draft: true,
 			}),
 		).resolves.toEqual({ ok: true, number: 123, url: "https://github.com/o/r/pull/123" });
-		expect(called).toBe(true);
+
+		expect(observedBody).toBe("multi\nline body");
+		expect(observedArgs).toContain("--draft");
 	});
 
-	it("createPr invokes glab and parses the created MR URL", async () => {
+	it("createPr invokes glab with --description-file and parses the created MR URL", async () => {
+		let observedBody: string | null = null;
 		const exec = execFrom((cmd, args) => {
 			expect(cmd).toBe("glab");
-			expect(args).toEqual([
-				"mr",
-				"create",
-				"--target-branch",
-				"main",
-				"--source-branch",
-				"feat/foo",
-				"--title",
-				"feat: add foo",
-				"--description",
-				"body",
-				"--yes",
-			]);
+			const flagIndex = args.indexOf("--description-file");
+			expect(flagIndex).toBeGreaterThan(-1);
+			expect(typeof args[flagIndex + 1]).toBe("string");
 			return { stderr: "Created merge request: https://gitlab.com/o/r/-/merge_requests/7\n" };
 		});
 
+		const readingExec: ExecRunner = async (cmd, args, opts) => {
+			const flagIndex = args.indexOf("--description-file");
+			if (flagIndex !== -1) observedBody = await readFile(args[flagIndex + 1] as string, "utf8");
+			return await exec(cmd, args, opts);
+		};
+
 		await expect(
-			createPr(exec, "gitlab", {
+			createPr(readingExec, "gitlab", {
 				base: "main",
 				head: "feat/foo",
 				title: "feat: add foo",
-				body: "body",
+				body: "body content",
 			}),
 		).resolves.toEqual({ ok: true, number: 7, url: "https://gitlab.com/o/r/-/merge_requests/7" });
+
+		expect(observedBody).toBe("body content");
 	});
 
 	it("createPr surfaces unsupported providers and CLI failures", async () => {
