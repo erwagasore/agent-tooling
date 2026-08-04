@@ -35,12 +35,30 @@ git_pr({ title: string; body?: string; draft?: boolean })
    Confirm with the user before creation.
 8. **Draft** — ask whether to open as draft. Pass `draft: true` to `git_pr()` when requested.
 9. **Create/re-use** — call `git_pr({ title, body, draft })`. If `details.reused === true`, report that the existing open PR was returned. If `isError === true`, surface `details.reason` and stop.
-10. **Summary** — PR URL, number, title, target branch, draft status, and next step: merge on the host, then run `/ship` to land.
+10. **Summary** — PR URL, number, title, target branch, draft status, then **always** print the review reminder (next section). After merge on the host, run `/ship` to land.
+
+## Review reminder (required)
+
+After a PR is opened **or** an existing open PR is reported, remind the user to run a **git `diff` review** before merge:
+
+```text
+Before merge, review the PR diff:
+  /skill:review diff
+  /skill:review memory diff    # Zig/Rust/C/C++
+  /skill:review api diff
+  /skill:review idioms diff
+  /skill:review elegance diff
+```
+
+- Default target on a feature branch is already `diff`; the explicit `diff` token makes the intent obvious.
+- Do **not** auto-start the review unless the user asks — only remind.
+- If the PR is docs/chore-only, still remind once (review may be a quick empty Must/Should).
 
 ## Composes
 
 - `check-preflight`
 - `detect-default-branch`
 - `detect-existing-pr`
+- `review` (reminder only — `/skill:review diff` before merge)
 - `pi-extensions/git-pr` (`git_pr()` canonical mechanism)
 - `gh` / `glab` CLIs as the underlying provider transport
