@@ -103,7 +103,9 @@ function describeState(state: ShipState, c: ShipContext): string {
 			lines.push("→ Will push branch and open a PR.");
 			break;
 		case "pr-open":
-			lines.push("→ PR is open. Wait for merge, then run `/ship` again.");
+			lines.push(
+				"→ PR is open. Before merge: `/skill:review diff`. After merge: `/ship` to land.",
+			);
 			break;
 		case "pr-merged":
 			lines.push("→ Will clean up the local branch and land on the default branch.");
@@ -215,14 +217,20 @@ async function phaseNoPr(
 	}
 	console.log(`Opened PR #${created.number}: ${created.url}`);
 	ctx.ui.notify(`PR #${created.number} opened — ${created.url}`, "info");
-	ctx.ui.notify("Run `/ship` again after merge to land.", "info");
+	ctx.ui.notify("Before merge: `/skill:review diff` (api/memory/idioms/elegance as needed).", "info");
+	ctx.ui.notify("After merge: `/ship` to land.", "info");
 }
 
 async function phasePrOpen(c: ShipContext, ctx: ExtensionCommandContext): Promise<void> {
 	const pr = c.existingPr!;
-	const msg = `PR #${pr.number} is open: ${pr.url}\nMerge it on the host, then run \`/ship\` again to land.`;
+	const msg = [
+		`PR #${pr.number} is open: ${pr.url}`,
+		"Before merge: `/skill:review diff` (or `/skill:review api diff`, etc.).",
+		"After merge on the host: run `/ship` again to land.",
+	].join("\n");
 	console.log(msg);
 	ctx.ui.notify(`PR #${pr.number} open — ${pr.url}`, "info");
+	ctx.ui.notify("Before merge: `/skill:review diff`.", "info");
 }
 
 async function phasePrMerged(

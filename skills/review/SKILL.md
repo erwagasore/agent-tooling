@@ -22,6 +22,25 @@ Pi registers this skill as **`/skill:review`**. Arguments after the command are 
 
 Natural language that loads this skill uses the same tokens (`memory`, `api diff`, …).
 
+### PR workflow (reminders from other skills)
+
+`/ship` and `create-pr` **remind** (do not auto-run) a diff review at two moments:
+
+1. **Just after a PR is opened** — review the branch before anyone merges.
+2. **While a PR is still open** (`/ship` in `pr-open`) — same reminder before merge on the host.
+
+Recommended commands in that context:
+
+```text
+/skill:review diff
+/skill:review memory diff
+/skill:review api diff
+/skill:review idioms diff
+/skill:review elegance diff
+```
+
+On a feature branch the default target is already `diff`; keep the explicit `diff` token in reminders so intent stays obvious.
+
 ### Pass tokens (pick at most one)
 
 | Token(s) | Pass |
