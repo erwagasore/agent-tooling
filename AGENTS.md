@@ -56,6 +56,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/detect-provider/` — detect-provider: detect git hosting provider and CLI from remote URL
 - `skills/init-repo/` — init-repo: initialise repo, create remote, configure branch protection
 - `skills/promote-plan/` — promote-plan: promote completed `docs/plan.md` into SPEC.md and reset for the next cycle
+- `skills/review-codebase/` — review-codebase: closed multi-pass code-quality audit (memory, API ergonomics, idioms, elegance); git-scoped diff or full tree
 - `skills/ship-feature/` — ship-feature: push, create PR, and after merge clean up and land back on default branch (human-facing doc for `/ship`)
 - `skills/stress-test-spec/` — stress-test-spec: stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
