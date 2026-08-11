@@ -94,7 +94,7 @@ These skills are plain Markdown files following the [Agent Skills standard](http
 - `/create-skill` — scaffold a new pi skill following the standard architecture
 - `/init-repo` — initialise repo, create remote, configure branch protection
 - `/promote-plan` — promote completed `docs/plan.md` into SPEC.md and reset for the next cycle
-- `/stress-test-spec` — stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
+- `/stress-plan` — stress-test an active implementation plan one question at a time for ambiguity, omissions, contradictions, weak task boundaries, dependencies, scope leaks, untestable outcomes, and ungrounded approaches
 - `/sync-docs` — create or update core repo docs and generated README command sections
 
 **Utility** — reusable building blocks:

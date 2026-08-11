@@ -217,7 +217,7 @@ The current cycle's task breakdown lives in `docs/plan.md`.
 | `create-skill` | standalone — scaffolds a new skill |
 | `create-plan` | standalone — drafts `docs/plan.md` |
 | `promote-plan` | standalone — folds plan into SPEC.md and resets |
-| `stress-test-spec` | standalone — interrogates SPEC.md for gaps |
+| `stress-plan` | standalone — interrogates the active implementation plan one material question at a time; edits only the plan while treating AGENTS/SPEC as read-only normative context |
 
 ### Composite
 

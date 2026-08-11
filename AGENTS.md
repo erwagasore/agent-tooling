@@ -58,7 +58,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - `skills/promote-plan/` — promote-plan: promote completed `docs/plan.md` into SPEC.md and reset for the next cycle
 - `skills/review/` — review: `/skill:review [memory|api|idioms|elegance] [diff|full]` closed multi-pass code audit (git-scoped)
 - `skills/ship-feature/` — ship-feature: push, create PR, and after merge clean up and land back on default branch (human-facing doc for `/ship`)
-- `skills/stress-test-spec/` — stress-test-spec: stress-test project spec files by asking one question at a time to find gaps, ambiguities, contradictions, and untestable rules
+- `skills/stress-plan/` — stress-plan: stress-test an active implementation plan one question at a time, grounding non-trivial approaches in explicit principles and invariants
 - `skills/sync-docs/` — sync-docs: create or update core repo documentation from templates
 - `skills/sync-docs/templates/` — document templates (README, AGENTS, SPEC, REFERENCE, LICENSE, docs/index, CONTRIBUTING)
 - `tests/` — Vitest coverage for deterministic extension behaviour
