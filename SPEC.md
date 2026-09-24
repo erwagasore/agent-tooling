@@ -150,6 +150,8 @@ git_pr({ title: string; body?: string; draft?: boolean }): {
 
 The shape is intentionally flat (rather than a discriminated union) because pi's `TOutput` is inferred from the first return path; a union would force later returns into the narrow first type.
 
+Non-empty PR/MR bodies are written to a temporary file and passed through `gh pr create --body-file` or `glab mr create --description-file`; empty bodies omit the body flag. This keeps multiline content out of direct CLI arguments and avoids escaping edge cases.
+
 ### `git-release`
 
 Reads the latest `v*` tag, walks commits since it, classifies CC types, and either previews or applies a release.
@@ -271,12 +273,14 @@ Skills must not imply unsupported providers are automated. They may give manual 
 
 ### Verification
 
-Local verification is part of the repo contract. TypeScript and Vitest are the baseline for deterministic extension behavior.
+Local verification is part of the repo contract. TypeScript, Biome formatting, and Vitest are the baseline for deterministic extension behavior.
 
 ```
-npm run typecheck   → tsc --noEmit
-npm test            → vitest run
-npm run verify      → typecheck + tests
+npm run typecheck     → tsc --noEmit
+npm run format        → biome format --write pi-extensions tests
+npm run format:check  → biome format pi-extensions tests
+npm test              → vitest run
+npm run verify        → typecheck + format check + tests
 ```
 
 Tests live under `tests/`, including a committed `tests/helpers/pi-harness.ts` mock of the pi extension API. Tests should prefer pure helpers or this mock harness over live remotes, must cover both happy and failure paths, and must include any non-git extensions added to `pi-extensions/`. Any change to extension behavior should add or update tests in the same PR.
@@ -304,6 +308,7 @@ CHANGELOG.md                     ← release history
 CONTRIBUTING.md                  ← contributor guide
 package.json                     ← pi package metadata + local verification scripts
 package-lock.json                ← locked dev/runtime dependency graph
+biome.json                       ← formatter configuration
 tsconfig.json                    ← TypeScript verification config
 docs/
   index.md                       ← docs landing page
