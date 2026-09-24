@@ -32,7 +32,7 @@ Cycle goal: tighten the v0.10.x repo around style consistency, release ergonomic
 
 ## Phase 3 — Small maintenance
 
-- [ ] **`docs(agents): track pi-coding-agent rename plan`**
+- [x] **`docs(agents): track pi-coding-agent rename plan`**
 
   Add a short, dated entry in `AGENTS.md` (or a new `docs/notes.md`) tracking the upstream rename to `@earendil-works/pi-coding-agent` so the migration is not forgotten. No code change yet; this is a deliberate watch-list entry. This anchors to `AGENTS.md` Workflow / Repo map and `package.json` devDependencies.
 
