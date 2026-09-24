@@ -124,7 +124,7 @@ These skills are plain Markdown files following the [Agent Skills standard](http
 
 - `/plan` — draft `docs/plan.md` via the create-plan skill with model-aware prompting
 - `/release status` — preview bump type, next version, and draft changelog without mutation
-- `/release` — apply the computed release: bump manifests, changelog, commit, tag, push, and publish provider release notes
+- `/release` — apply the computed stable release, or promote the current pre-release to its matching stable version
 - `/release patch|minor|major` — apply a stable release with an explicit bump override
 - `/release prerelease <identifier> [patch|minor|major]` — start or increment a pre-release such as `rc.1`
 - `/release status prerelease <identifier> [bump]` — preview a pre-release without mutation

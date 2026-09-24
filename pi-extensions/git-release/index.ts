@@ -4,9 +4,10 @@
  * `/release status`  → read latest tag, walk commits, classify CC types,
  *                       print bump + next version + draft changelog. Pure dry-run.
  * `/release [patch|minor|major]`
- *                    → confirm, bump manifest, prepend CHANGELOG.md, commit
- *                       `chore: release vX.Y.Z`, tag annotated, push --follow-tags,
- *                       create provider release via gh/glab.
+ *                    → promote a current pre-release or confirm, bump manifest,
+ *                       prepend CHANGELOG.md, commit `chore: release vX.Y.Z`,
+ *                       tag annotated, push --follow-tags, and create provider
+ *                       release via gh/glab.
  * `/release prerelease <id> [patch|minor|major]`
  *                    → cut or increment a pre-release such as `v1.2.0-rc.1`.
  *
@@ -58,7 +59,7 @@ interface ReleasePlan {
 	currentVersion: Semver;
 	currentTag: string | null; // last release tag, e.g. "v0.8.0"
 	bump: Bump;
-	bumpReason: "computed" | "override" | "no-bump-worthy";
+	bumpReason: "computed" | "override" | "no-bump-worthy" | "prerelease-continuation" | "prerelease-promotion";
 	nextVersion: Semver;
 	commits: CommitInfo[];
 	changelog: string;
@@ -127,9 +128,9 @@ function applyBump(v: Semver, bump: Bump): Semver {
 	return v;
 }
 
-function applyPrerelease(v: Semver, bump: Bump, identifier: string): Semver {
+function applyPrerelease(v: Semver, identifier: string, bump?: Bump): Semver {
 	const base = { major: v.major, minor: v.minor, patch: v.patch };
-	if (v.prerelease) {
+	if (v.prerelease && bump === undefined) {
 		const prefix = `${identifier}.`;
 		const sequence = v.prerelease.startsWith(prefix) ? v.prerelease.slice(prefix.length) : "";
 		if (/^\d+$/.test(sequence)) {
@@ -137,7 +138,14 @@ function applyPrerelease(v: Semver, bump: Bump, identifier: string): Semver {
 		}
 		return { ...base, prerelease: `${identifier}.1` };
 	}
-	return { ...applyBump(v, bump), prerelease: `${identifier}.1` };
+	return { ...applyBump(v, bump ?? "none"), prerelease: `${identifier}.1` };
+}
+
+function applyStableRelease(v: Semver, bump?: Bump): Semver {
+	if (v.prerelease && bump === undefined) {
+		return { major: v.major, minor: v.minor, patch: v.patch };
+	}
+	return applyBump(v, bump ?? "none");
 }
 
 // ── Commit classification ────────────────────────────────────
@@ -236,17 +244,24 @@ async function readReleasePlan(
 	const commits = records.map(classifyCommit);
 
 	const computed = computeBump(commits);
-	let bump: Bump = override ?? computed;
-	let bumpReason: ReleasePlan["bumpReason"] = override
-		? "override"
-		: computed === "none"
-			? "no-bump-worthy"
-			: "computed";
-	if (bump === "none") bumpReason = "no-bump-worthy";
+	const continuingPrerelease = !!currentVersion.prerelease && !!prerelease && override === undefined;
+	const promotingPrerelease = !!currentVersion.prerelease && !prerelease && override === undefined;
+	let bump: Bump;
+	let bumpReason: ReleasePlan["bumpReason"];
+	if (continuingPrerelease) {
+		bump = "none";
+		bumpReason = "prerelease-continuation";
+	} else if (promotingPrerelease) {
+		bump = "none";
+		bumpReason = "prerelease-promotion";
+	} else {
+		bump = override ?? computed;
+		bumpReason = override ? "override" : computed === "none" ? "no-bump-worthy" : "computed";
+	}
 
 	const nextVersion = prerelease
-		? applyPrerelease(currentVersion, bump, prerelease)
-		: applyBump(currentVersion, bump);
+		? applyPrerelease(currentVersion, prerelease, continuingPrerelease ? undefined : bump)
+		: applyStableRelease(currentVersion, promotingPrerelease ? undefined : bump);
 	const date = new Date().toISOString().slice(0, 10);
 	const changelog = buildChangelog(commits, nextVersion, date);
 
@@ -936,7 +951,7 @@ function parseReleaseArgs(args: string | undefined): ReleaseArgs {
 export default function gitReleaseExtension(pi: ExtensionAPI) {
 	pi.registerCommand("release", {
 		description:
-			"Preview or apply a stable or pre-release version from the Conventional Commit log (`/release status`, `/release patch|minor|major`, `/release prerelease rc`).",
+			"Preview or apply a stable or pre-release version, including promotion to stable (`/release status`, `/release patch|minor|major`, `/release prerelease rc`).",
 		handler: async (args, ctx) => {
 			const exec: ExecRunner = (cmd, eargs, opts) => pi.exec(cmd, eargs, opts);
 			const signal = ctx.signal;
@@ -973,7 +988,7 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 
 			if (isStatus) return;
 
-			if (plan.bump === "none" && !(prerelease && plan.currentVersion.prerelease)) {
+			if (plan.bump === "none" && !plan.currentVersion.prerelease) {
 				const prereleaseHint = prerelease ? ` or \`/release prerelease ${prerelease} patch\`` : "";
 				ctx.ui.notify(
 					`No bump-worthy commits since last release. Use \`/release patch\`, \`/release minor\`, or \`/release major\` to override${prereleaseHint}.`,
@@ -1005,6 +1020,7 @@ export {
 	formatSemver,
 	applyBump,
 	applyPrerelease,
+	applyStableRelease,
 	parseReleaseArgs,
 	classifyCommit,
 	computeBump,
