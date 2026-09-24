@@ -6,6 +6,9 @@
  * relative path, e.g. `../_shared/git-internals.ts`.
  */
 
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ExecOptions, ExecResult } from "@mariozechner/pi-coding-agent";
 
 // ── Types ────────────────────────────────────────────────────
@@ -223,9 +226,70 @@ export async function removeWorktree(
 }
 
 /**
+ * Create a temporary file containing `body` and call `fn` with its path. The
+ * directory is removed afterwards regardless of outcome. When `body` is
+ * empty, no file is created and `fn` is called with `null` so callers can
+ * skip the body flag entirely.
+ */
+export async function withBodyFile<T>(body: string, fn: (path: string | null) => Promise<T>): Promise<T> {
+	if (!body) return fn(null);
+	const dir = await mkdtemp(join(tmpdir(), "git-pr-body-"));
+	const path = join(dir, "body.md");
+	await writeFile(path, body, "utf8");
+	try {
+		return await fn(path);
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+}
+
+/**
+ * Build the CLI argv for a PR/MR create call. Body content is passed via a
+ * file path (`--body-file` / `--description-file`) instead of a string flag
+ * to avoid escaping pitfalls and to mirror the manual workflow used for
+ * opening PRs by hand.
+ */
+export function buildCreatePrArgs(
+	provider: "github" | "gitlab",
+	opts: CreatePrOptions,
+	bodyFilePath: string | null,
+): string[] {
+	if (provider === "github") {
+		return [
+			"pr",
+			"create",
+			"--base",
+			opts.base,
+			"--head",
+			opts.head,
+			"--title",
+			opts.title,
+			...(bodyFilePath ? ["--body-file", bodyFilePath] : []),
+			...(opts.draft ? ["--draft"] : []),
+		];
+	}
+	return [
+		"mr",
+		"create",
+		"--target-branch",
+		opts.base,
+		"--source-branch",
+		opts.head,
+		"--title",
+		opts.title,
+		...(bodyFilePath ? ["--description-file", bodyFilePath] : []),
+		...(opts.draft ? ["--draft"] : []),
+		"--yes",
+	];
+}
+
+/**
  * Create a PR on the given provider. Returns the new PR's number and URL on
  * success, or an error message string on failure. Does NOT detect existing
  * PRs — callers (e.g. git-pr) decide whether to short-circuit on duplicates.
+ *
+ * Body content is written to a temp file and passed via `--body-file` (gh)
+ * or `--description-file` (glab) to avoid edge-case shell/argument escaping.
  */
 export async function createPr(
 	exec: ExecRunner,
@@ -238,51 +302,25 @@ export async function createPr(
 	}
 	const body = opts.body ?? "";
 	const cli = provider === "github" ? "gh" : "glab";
-	const args =
-		provider === "github"
-			? [
-					"pr",
-					"create",
-					"--base",
-					opts.base,
-					"--head",
-					opts.head,
-					"--title",
-					opts.title,
-					"--body",
-					body,
-					...(opts.draft ? ["--draft"] : []),
-				]
-			: [
-					"mr",
-					"create",
-					"--target-branch",
-					opts.base,
-					"--source-branch",
-					opts.head,
-					"--title",
-					opts.title,
-					"--description",
-					body,
-					...(opts.draft ? ["--draft"] : []),
-					"--yes",
-				];
 
-	try {
-		const r = await exec(cli, args, { signal, timeout: 60_000 });
-		const out = [r.stdout, r.stderr].filter(Boolean).join("\n");
-		if (r.code !== 0 || r.killed) {
-			return { ok: false, error: out.trim() || `${cli} ${args.join(" ")} failed with code ${r.code}` };
+	return await withBodyFile(body, async (bodyFilePath) => {
+		const args = buildCreatePrArgs(provider, opts, bodyFilePath);
+		try {
+			const r = await exec(cli, args, { signal, timeout: 60_000 });
+			const out = [r.stdout, r.stderr].filter(Boolean).join("\n");
+			if (r.code !== 0 || r.killed) {
+				return { ok: false, error: out.trim() || `${cli} ${args.join(" ")} failed with code ${r.code}` };
+			}
+			const urlMatch = out.match(/https?:\/\/\S+/);
+			if (!urlMatch) {
+				return { ok: false, error: `Could not parse PR URL from CLI output:\n${out}` };
+			}
+			const url = urlMatch[0].replace(/[)\]\s.,]+$/, "");
+			const numberMatch = url.match(/\/(\d+)\/?$/);
+			const number = numberMatch ? parseInt(numberMatch[1] ?? "0", 10) : 0;
+			return { ok: true, number, url };
+		} catch (err) {
+			return { ok: false, error: String((err as Error).message ?? err) };
 		}
-		const urlMatch = out.match(/https?:\/\/\S+/);
-		if (!urlMatch) {
-			return { ok: false, error: `Could not parse PR URL from CLI output:\n${out}` };
-		}
-		const url = urlMatch[0].replace(/[)\]\s.,]+$/, "");
-		const numberMatch = url.match(/\/(\d+)\/?$/);
-		const number = numberMatch ? parseInt(numberMatch[1] ?? "0", 10) : 0;
-		return { ok: true, number, url };
-	} catch (err) {
-		return { ok: false, error: String((err as Error).message ?? err) };
-	}
+	});
 }
