@@ -24,7 +24,7 @@ Cycle goal: tighten the v0.10.x repo around style consistency, release ergonomic
 
   *Done when:* PR/MR bodies are passed through temp files for both supported providers, with tests verifying the file flag and body content, and `npm run verify` passes.
 
-- [ ] **`feat(extensions): support release pre-release identifiers`**
+- [x] **`feat(extensions): support release pre-release identifiers`**
 
   Extend `pi-extensions/git-release/index.ts` so `/release` can cut pre-releases (`-alpha.1`, `-rc.1`, …): semver helpers must parse and increment pre-release tags correctly when re-releasing the same identifier (`-rc.1` → `-rc.2`), the slash command must expose a way to specify a pre-release identifier, and `skills/create-release/SKILL.md` should drop the "not yet supported" note. This anchors to `SPEC.md:153` (`git-release`).
 

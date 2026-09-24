@@ -28,6 +28,10 @@ Use [Conventional Commits](https://www.conventionalcommits.org/).
 - Manifest (if present) is source of truth.
 - Tags: `vX.Y.Z` for stable releases and `vX.Y.Z-identifier.N` for pre-releases.
 
+## Dependency watch
+
+- **2026-09-24 — pi-coding-agent package rename:** upstream renamed `@mariozechner/pi-coding-agent` to `@earendil-works/pi-coding-agent`. Keep the current dependency until the renamed package is verified compatible with this repo's extension APIs and test harness. Once verified, update `package.json`, `package-lock.json`, and TypeScript imports together, then run `npm run verify` before merging.
+
 ## Repo map
 
 - `pi-extensions/` — pi coding agent extensions
