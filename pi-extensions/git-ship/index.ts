@@ -103,9 +103,7 @@ function describeState(state: ShipState, c: ShipContext): string {
 			lines.push("→ Will push branch and open a PR.");
 			break;
 		case "pr-open":
-			lines.push(
-				"→ PR is open. Before merge: `/skill:review diff`. After merge: `/ship` to land.",
-			);
+			lines.push("→ PR is open. Before merge: `/skill:review diff`. After merge: `/ship` to land.");
 			break;
 		case "pr-merged":
 			lines.push("→ Will clean up the local branch and land on the default branch.");

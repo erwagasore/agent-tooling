@@ -4,9 +4,12 @@
  * `/release status`  → read latest tag, walk commits, classify CC types,
  *                       print bump + next version + draft changelog. Pure dry-run.
  * `/release [patch|minor|major]`
- *                    → confirm, bump manifest, prepend CHANGELOG.md, commit
- *                       `chore: release vX.Y.Z`, tag annotated, push --follow-tags,
- *                       create provider release via gh/glab.
+ *                    → promote a current pre-release or confirm, bump manifest,
+ *                       prepend CHANGELOG.md, commit `chore: release vX.Y.Z`,
+ *                       tag annotated, push --follow-tags, and create provider
+ *                       release via gh/glab.
+ * `/release prerelease <id> [patch|minor|major]`
+ *                    → cut or increment a pre-release such as `v1.2.0-rc.1`.
  *
  * Replaces the prose state machine inside the `create-release` skill. SPEC §
  * Extensions / git-release.
@@ -32,6 +35,14 @@ interface Semver {
 	major: number;
 	minor: number;
 	patch: number;
+	prerelease?: string;
+}
+
+interface ReleaseArgs {
+	isStatus: boolean;
+	override?: Exclude<Bump, "none">;
+	prerelease?: string;
+	error?: string;
 }
 
 interface CommitInfo {
@@ -48,7 +59,7 @@ interface ReleasePlan {
 	currentVersion: Semver;
 	currentTag: string | null; // last release tag, e.g. "v0.8.0"
 	bump: Bump;
-	bumpReason: "computed" | "override" | "no-bump-worthy";
+	bumpReason: "computed" | "override" | "no-bump-worthy" | "prerelease-continuation" | "prerelease-promotion";
 	nextVersion: Semver;
 	commits: CommitInfo[];
 	changelog: string;
@@ -87,17 +98,27 @@ interface EcosystemSignal {
 // ── Semver helpers ───────────────────────────────────────────
 
 function parseSemver(s: string): Semver | null {
-	const m = s.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:-.+)?$/);
+	const m = s
+		.trim()
+		.match(
+			/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+		);
 	if (!m) return null;
+	const prerelease = m[4];
+	if (prerelease?.split(".").some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith("0"))) {
+		return null;
+	}
 	return {
 		major: parseInt(m[1] ?? "0", 10),
 		minor: parseInt(m[2] ?? "0", 10),
 		patch: parseInt(m[3] ?? "0", 10),
+		...(prerelease ? { prerelease } : {}),
 	};
 }
 
 function formatSemver(v: Semver): string {
-	return `${v.major}.${v.minor}.${v.patch}`;
+	const base = `${v.major}.${v.minor}.${v.patch}`;
+	return v.prerelease ? `${base}-${v.prerelease}` : base;
 }
 
 function applyBump(v: Semver, bump: Bump): Semver {
@@ -105,6 +126,26 @@ function applyBump(v: Semver, bump: Bump): Semver {
 	if (bump === "minor") return { major: v.major, minor: v.minor + 1, patch: 0 };
 	if (bump === "patch") return { major: v.major, minor: v.minor, patch: v.patch + 1 };
 	return v;
+}
+
+function applyPrerelease(v: Semver, identifier: string, bump?: Bump): Semver {
+	const base = { major: v.major, minor: v.minor, patch: v.patch };
+	if (v.prerelease && bump === undefined) {
+		const prefix = `${identifier}.`;
+		const sequence = v.prerelease.startsWith(prefix) ? v.prerelease.slice(prefix.length) : "";
+		if (/^\d+$/.test(sequence)) {
+			return { ...base, prerelease: `${identifier}.${parseInt(sequence, 10) + 1}` };
+		}
+		return { ...base, prerelease: `${identifier}.1` };
+	}
+	return { ...applyBump(v, bump ?? "none"), prerelease: `${identifier}.1` };
+}
+
+function applyStableRelease(v: Semver, bump?: Bump): Semver {
+	if (v.prerelease && bump === undefined) {
+		return { major: v.major, minor: v.minor, patch: v.patch };
+	}
+	return applyBump(v, bump ?? "none");
 }
 
 // ── Commit classification ────────────────────────────────────
@@ -178,6 +219,7 @@ function buildChangelog(commits: CommitInfo[], version: Semver, date: string): s
 async function readReleasePlan(
 	exec: ExecRunner,
 	override: Bump | undefined,
+	prerelease: string | undefined,
 	signal?: AbortSignal,
 ): Promise<ReleasePlan> {
 	const tagsOut = await tryExec(exec, "git", ["tag", "--list", "v*", "--sort=-version:refname"], signal);
@@ -202,15 +244,24 @@ async function readReleasePlan(
 	const commits = records.map(classifyCommit);
 
 	const computed = computeBump(commits);
-	let bump: Bump = override ?? computed;
-	let bumpReason: ReleasePlan["bumpReason"] = override
-		? "override"
-		: computed === "none"
-			? "no-bump-worthy"
-			: "computed";
-	if (bump === "none") bumpReason = "no-bump-worthy";
+	const continuingPrerelease = !!currentVersion.prerelease && !!prerelease && override === undefined;
+	const promotingPrerelease = !!currentVersion.prerelease && !prerelease && override === undefined;
+	let bump: Bump;
+	let bumpReason: ReleasePlan["bumpReason"];
+	if (continuingPrerelease) {
+		bump = "none";
+		bumpReason = "prerelease-continuation";
+	} else if (promotingPrerelease) {
+		bump = "none";
+		bumpReason = "prerelease-promotion";
+	} else {
+		bump = override ?? computed;
+		bumpReason = override ? "override" : computed === "none" ? "no-bump-worthy" : "computed";
+	}
 
-	const nextVersion = applyBump(currentVersion, bump);
+	const nextVersion = prerelease
+		? applyPrerelease(currentVersion, prerelease, continuingPrerelease ? undefined : bump)
+		: applyStableRelease(currentVersion, promotingPrerelease ? undefined : bump);
 	const date = new Date().toISOString().slice(0, 10);
 	const changelog = buildChangelog(commits, nextVersion, date);
 
@@ -233,6 +284,7 @@ function formatPlan(plan: ReleasePlan, mode: "status" | "execute"): string {
 	lines.push("=== Release plan ===");
 	lines.push(`Current:  ${plan.currentTag ?? "(no tags yet)"}  →  v${formatSemver(plan.nextVersion)}`);
 	lines.push(`Bump:     ${plan.bump}  (${plan.bumpReason})`);
+	if (plan.nextVersion.prerelease) lines.push(`Pre-release: ${plan.nextVersion.prerelease}`);
 	lines.push(`Commits:  ${plan.commits.length}`);
 	if (plan.commits.length) {
 		const byType = new Map<string, number>();
@@ -813,7 +865,16 @@ async function executeRelease(
 		const rel = await execLoud(
 			exec,
 			"gh",
-			["release", "create", versionStr, "--title", versionStr, "--notes", notes],
+			[
+				"release",
+				"create",
+				versionStr,
+				"--title",
+				versionStr,
+				"--notes",
+				notes,
+				...(plan.nextVersion.prerelease ? ["--prerelease"] : []),
+			],
 			signal,
 		);
 		if (!rel.ok) {
@@ -851,22 +912,55 @@ async function executeRelease(
 
 // ── Slash command ────────────────────────────────────────────
 
-const ARG_PATTERNS = {
-	status: /^(status|--?dry-run)\b/,
-	bumpOverride: /^(patch|minor|major)$/,
-};
+const RELEASE_USAGE =
+	"Usage: /release [status] [patch|minor|major] or /release [status] prerelease <identifier> [patch|minor|major]";
+const BUMP_VALUES = new Set<Exclude<Bump, "none">>(["patch", "minor", "major"]);
+
+function isBump(value: string | undefined): value is Exclude<Bump, "none"> {
+	return !!value && BUMP_VALUES.has(value as Exclude<Bump, "none">);
+}
+
+function parseReleaseArgs(args: string | undefined): ReleaseArgs {
+	const tokens = (args ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+	let isStatus = false;
+	if (["status", "dry-run", "-dry-run", "--dry-run"].includes(tokens[0] ?? "")) {
+		isStatus = true;
+		tokens.shift();
+	}
+
+	if (tokens.length === 0) return { isStatus };
+	if (tokens.length === 1 && isBump(tokens[0])) return { isStatus, override: tokens[0] };
+
+	if (["prerelease", "pre-release", "pre"].includes(tokens[0] ?? "")) {
+		const identifier = tokens[1];
+		if (!identifier || !/^[0-9a-z-]+$/.test(identifier)) {
+			return {
+				isStatus,
+				error: `Pre-release identifier must contain only letters, numbers, and hyphens. ${RELEASE_USAGE}`,
+			};
+		}
+		if (tokens.length === 2) return { isStatus, prerelease: identifier };
+		if (tokens.length === 3 && isBump(tokens[2])) {
+			return { isStatus, prerelease: identifier, override: tokens[2] };
+		}
+	}
+
+	return { isStatus, error: RELEASE_USAGE };
+}
 
 export default function gitReleaseExtension(pi: ExtensionAPI) {
 	pi.registerCommand("release", {
 		description:
-			"Read latest tag and CC log, compute next semver, and either preview the plan (`/release status`) or apply it (`/release` or `/release patch|minor|major` to override the bump).",
+			"Preview or apply a stable or pre-release version, including promotion to stable (`/release status`, `/release patch|minor|major`, `/release prerelease rc`).",
 		handler: async (args, ctx) => {
 			const exec: ExecRunner = (cmd, eargs, opts) => pi.exec(cmd, eargs, opts);
 			const signal = ctx.signal;
-			const trimmed = (args ?? "").trim().toLowerCase();
-			const isStatus = ARG_PATTERNS.status.test(trimmed);
-			const overrideMatch = trimmed.match(ARG_PATTERNS.bumpOverride);
-			const override = (overrideMatch?.[1] ?? null) as Bump | null;
+			const parsedArgs = parseReleaseArgs(args);
+			if (parsedArgs.error) {
+				ctx.ui.notify(parsedArgs.error, "error");
+				return;
+			}
+			const { isStatus, override, prerelease } = parsedArgs;
 
 			// Read repo state
 			const remoteUrl = await tryExec(exec, "git", ["remote", "get-url", "origin"], signal);
@@ -889,14 +983,15 @@ export default function gitReleaseExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const plan = await readReleasePlan(exec, override ?? undefined, signal);
+			const plan = await readReleasePlan(exec, override, prerelease, signal);
 			console.log(formatPlan(plan, isStatus ? "status" : "execute"));
 
 			if (isStatus) return;
 
-			if (plan.bump === "none") {
+			if (plan.bump === "none" && !plan.currentVersion.prerelease) {
+				const prereleaseHint = prerelease ? ` or \`/release prerelease ${prerelease} patch\`` : "";
 				ctx.ui.notify(
-					"No bump-worthy commits since last release. Use `/release patch`, `/release minor`, or `/release major` to override.",
+					`No bump-worthy commits since last release. Use \`/release patch\`, \`/release minor\`, or \`/release major\` to override${prereleaseHint}.`,
 					"warning",
 				);
 				return;
@@ -924,6 +1019,9 @@ export {
 	parseSemver,
 	formatSemver,
 	applyBump,
+	applyPrerelease,
+	applyStableRelease,
+	parseReleaseArgs,
 	classifyCommit,
 	computeBump,
 	buildChangelog,

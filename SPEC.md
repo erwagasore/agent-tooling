@@ -155,12 +155,16 @@ The shape is intentionally flat (rather than a discriminated union) because pi's
 Reads the latest `v*` tag, walks commits since it, classifies CC types, and either previews or applies a release.
 
 ```
-/release status              → dry-run: print bump type, next version, draft changelog
-/release                     → apply (uses computed bump from CC log)
-/release patch|minor|major   → apply with explicit bump override
+/release status                                      → dry-run: print bump, next version, draft changelog
+/release                                             → computed stable release, or promote current pre-release
+/release patch|minor|major                           → apply a stable release with an explicit bump
+/release prerelease <identifier> [patch|minor|major] → apply a pre-release such as `rc.1`
+/release status prerelease <identifier> [bump]       → dry-run a pre-release
 ```
 
-Apply pipeline: preflight before mutation (default branch, clean tree, origin present, tag not present locally/remotely, provider auth available for GitHub/GitLab) → confirm with user → detect the project root and infer language/ecosystem signals from root marker files → bump high-confidence built-in manifests/lockfiles (`package.json`, `package-lock.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`) plus any root manifest-like file with exactly one unambiguous semver-like version field (for example Elixir `mix.exs`) → skip ambiguous manifests instead of guessing → prepend `CHANGELOG.md` → explicitly `git add` changed manifests plus `CHANGELOG.md` → commit `chore: release vX.Y.Z` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes. Partial failures print recovery steps for the commit, tag, push, or provider-release phase.
+Pre-releases start at `<identifier>.1`. Repeating an identifier on an existing pre-release increments its sequence without bumping the base again (`rc.1` → `rc.2`); changing the identifier without an explicit bump keeps the base and resets the sequence to `.1`. Explicit bumps always start the requested new base. Plain `/release` promotes the current pre-release to its matching stable base, including when no new bump-worthy commits exist.
+
+Apply pipeline: preflight before mutation (default branch, clean tree, origin present, tag not present locally/remotely, provider auth available for GitHub/GitLab) → confirm with user → detect the project root and infer language/ecosystem signals from root marker files → bump high-confidence built-in manifests/lockfiles (`package.json`, `package-lock.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`) plus any root manifest-like file with exactly one unambiguous semver-like version field (for example Elixir `mix.exs`) → skip ambiguous manifests instead of guessing → prepend `CHANGELOG.md` → explicitly `git add` changed manifests plus `CHANGELOG.md` → commit `chore: release vX.Y.Z[-identifier.N]` → tag annotated → confirm push → `git push origin {default} --follow-tags` → `gh release create` / `glab release create` with the changelog section as notes (GitHub releases are marked as pre-releases when applicable). Partial failures print recovery steps for the commit, tag, push, or provider-release phase.
 
 The `create-release` skill is the human-facing doc for this command; the extension owns mechanism, the skill owns wording for any prose polish a release needs after the fact.
 

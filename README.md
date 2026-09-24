@@ -124,8 +124,10 @@ These skills are plain Markdown files following the [Agent Skills standard](http
 
 - `/plan` — draft `docs/plan.md` via the create-plan skill with model-aware prompting
 - `/release status` — preview bump type, next version, and draft changelog without mutation
-- `/release` — apply the computed release: bump manifests, changelog, commit, tag, push, and publish provider release notes
-- `/release patch|minor|major` — apply a release with an explicit bump override
+- `/release` — apply the computed stable release, or promote the current pre-release to its matching stable version
+- `/release patch|minor|major` — apply a stable release with an explicit bump override
+- `/release prerelease <identifier> [patch|minor|major]` — start or increment a pre-release such as `rc.1`
+- `/release status prerelease <identifier> [bump]` — preview a pre-release without mutation
 - `/ship` — detect feature-delivery state and run the right phase: push + PR, wait, or land
 - `/ship status` — print ship state and predicted action without mutating anything
 - `/wt new <branch>` — create a linked worktree on a new branch from the default branch
@@ -145,7 +147,7 @@ These skills are plain Markdown files following the [Agent Skills standard](http
 ### Provider and ecosystem support
 
 - **PRs:** GitHub via `gh`; GitLab via `glab`; existing PR detection covers open, merged, and closed states.
-- **Releases:** GitHub via `gh release create`; GitLab via `glab release create`; Bitbucket/unknown providers are detected but do not publish PRs or release notes automatically.
+- **Releases:** stable and pre-release versions are supported; GitHub via `gh release create`; GitLab via `glab release create`; Bitbucket/unknown providers are detected but do not publish PRs or release notes automatically.
 - **Manifest versions:** `/release` detects the project root, infers ecosystem signals from root marker files, applies high-confidence built-ins (`package.json`, `package-lock.json`, `Cargo.toml`, `pyproject.toml`, `build.zig.zon`), and uses a safe generic fallback for root-level manifest-like files with exactly one unambiguous semver-like version field.
 - **Verification:** local contributors can run `npm run verify` to typecheck and run the Vitest suite.
 <!-- sync-docs:provider-support:end -->
