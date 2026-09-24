@@ -1,9 +1,10 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import gitReleaseExtension, {
 	applyBump,
+	applyPrerelease,
 	buildChangelog,
 	bumpManifests,
 	checkProviderAuth,
@@ -14,13 +15,14 @@ import gitReleaseExtension, {
 	formatRecoverySteps,
 	formatSemver,
 	parseSemver,
+	parseReleaseArgs,
 	preflightReleaseSafety,
 	detectProjectProfile,
 	stageReleaseFiles,
 	tagExists,
 } from "../pi-extensions/git-release/index.ts";
 import type { ExecRunner } from "../pi-extensions/_shared/git-internals.ts";
-import { createMockPi } from "./helpers/pi-harness.ts";
+import { createCommandContext, createMockPi } from "./helpers/pi-harness.ts";
 
 function execFrom(
 	handler: (
@@ -40,11 +42,40 @@ function execFrom(
 }
 
 describe("git-release helpers", () => {
-	it("parses, formats, and bumps semver", () => {
+	it("parses, formats, and bumps stable and pre-release semver", () => {
 		expect(parseSemver("v0.8.0")).toEqual({ major: 0, minor: 8, patch: 0 });
-		expect(parseSemver("1.2.3-rc.1")).toEqual({ major: 1, minor: 2, patch: 3 });
+		expect(parseSemver("1.2.3-rc.1")).toEqual({
+			major: 1,
+			minor: 2,
+			patch: 3,
+			prerelease: "rc.1",
+		});
+		expect(parseSemver("1.2.3-rc.01")).toBeNull();
 		expect(parseSemver("not-a-version")).toBeNull();
 		expect(formatSemver(applyBump({ major: 0, minor: 8, patch: 0 }, "minor"))).toBe("0.9.0");
+		expect(formatSemver({ major: 1, minor: 2, patch: 3, prerelease: "rc.1" })).toBe("1.2.3-rc.1");
+	});
+
+	it("starts and increments pre-release identifiers without rebumping their base", () => {
+		expect(formatSemver(applyPrerelease({ major: 0, minor: 8, patch: 0 }, "minor", "rc"))).toBe("0.9.0-rc.1");
+		expect(
+			formatSemver(applyPrerelease({ major: 0, minor: 9, patch: 0, prerelease: "rc.1" }, "minor", "rc")),
+		).toBe("0.9.0-rc.2");
+		expect(
+			formatSemver(applyPrerelease({ major: 0, minor: 9, patch: 0, prerelease: "alpha.3" }, "none", "rc")),
+		).toBe("0.9.0-rc.1");
+	});
+
+	it("parses stable and pre-release slash command arguments", () => {
+		expect(parseReleaseArgs(undefined)).toEqual({ isStatus: false });
+		expect(parseReleaseArgs("status minor")).toEqual({ isStatus: true, override: "minor" });
+		expect(parseReleaseArgs("prerelease rc")).toEqual({ isStatus: false, prerelease: "rc" });
+		expect(parseReleaseArgs("status prerelease alpha patch")).toEqual({
+			isStatus: true,
+			prerelease: "alpha",
+			override: "patch",
+		});
+		expect(parseReleaseArgs("prerelease rc.1").error).toContain("letters, numbers, and hyphens");
 	});
 
 	it("requires BREAKING CHANGE markers to start their own body line", () => {
@@ -89,6 +120,16 @@ describe("git-release helpers", () => {
 		expect(changelog).toContain("- Tighten classifier");
 		expect(changelog).toContain("### Other");
 		expect(changelog).not.toContain("Release v0.9.0");
+	});
+
+	it("renders pre-release versions in changelog headings", () => {
+		const changelog = buildChangelog(
+			[classifyCommit("f1\x00feat: add release candidate\x00")],
+			{ major: 1, minor: 0, patch: 0, prerelease: "rc.1" },
+			"2026-05-09",
+		);
+
+		expect(changelog).toContain("## [1.0.0-rc.1] — 2026-05-09");
 	});
 
 	it("extracts provider release notes by removing only the version header", () => {
@@ -212,6 +253,32 @@ describe("git-release helpers", () => {
 		expect(await readFile(join(repo, "pyproject.toml"), "utf8")).toContain('version = "0.2.0"');
 		expect(await readFile(join(repo, "build.zig.zon"), "utf8")).toContain('.version = "0.2.0"');
 		expect(await readFile(join(repo, "mix.exs"), "utf8")).toContain('version: "0.2.0"');
+	});
+
+	it("writes pre-release versions to manifests and lockfiles", async () => {
+		const repo = await mkdtemp(join(tmpdir(), "agent-tooling-release-"));
+		await writeFile(
+			join(repo, "package.json"),
+			JSON.stringify({ name: "demo", version: "0.1.0" }, null, 2) + "\n",
+		);
+		await writeFile(
+			join(repo, "package-lock.json"),
+			JSON.stringify(
+				{ name: "demo", version: "0.1.0", packages: { "": { name: "demo", version: "0.1.0" } } },
+				null,
+				2,
+			) + "\n",
+		);
+
+		await bumpManifests(repo, { major: 0, minor: 2, patch: 0, prerelease: "rc.1" });
+
+		expect(JSON.parse(await readFile(join(repo, "package.json"), "utf8"))).toMatchObject({
+			version: "0.2.0-rc.1",
+		});
+		expect(JSON.parse(await readFile(join(repo, "package-lock.json"), "utf8"))).toMatchObject({
+			version: "0.2.0-rc.1",
+			packages: { "": { version: "0.2.0-rc.1" } },
+		});
 	});
 
 	it("detects project ecosystems from root marker files", async () => {
@@ -384,11 +451,36 @@ describe("git-release helpers", () => {
 		);
 	});
 
+	it("previews an incremented pre-release through the /release command", async () => {
+		const exec = execFrom((cmd, args) => {
+			if (cmd !== "git") return { code: 1 };
+			if (args[0] === "remote" && args[1] === "get-url") {
+				return { stdout: "git@github.com:example/demo.git\n" };
+			}
+			if (args[0] === "branch") return { stdout: "main\n" };
+			if (args[0] === "symbolic-ref") return { stdout: "origin/main\n" };
+			if (args[0] === "status") return { stdout: "" };
+			if (args[0] === "rev-parse") return { stdout: "/repo\n" };
+			if (args[0] === "tag") return { stdout: "v1.2.0-rc.1\n" };
+			if (args[0] === "log") return { stdout: "" };
+			return { code: 1 };
+		});
+		const { pi, commands } = createMockPi(exec);
+		gitReleaseExtension(pi);
+		const log = vi.spyOn(console, "log").mockImplementation(() => {});
+		try {
+			await commands.get("release")?.handler("status prerelease rc", createCommandContext());
+			expect(log).toHaveBeenCalledWith(expect.stringContaining("v1.2.0-rc.2"));
+		} finally {
+			log.mockRestore();
+		}
+	});
+
 	it("registers the /release command through the committed test harness", () => {
 		const { pi, commands } = createMockPi();
 		gitReleaseExtension(pi);
 
 		expect(commands.has("release")).toBe(true);
-		expect(commands.get("release")?.description).toContain("compute next semver");
+		expect(commands.get("release")?.description).toContain("pre-release");
 	});
 });

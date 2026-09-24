@@ -18,7 +18,7 @@ Cycle goal: tighten the v0.10.x repo around style consistency, release ergonomic
 
 ## Phase 2 — Release ergonomics
 
-- [ ] **`fix(extensions): pass PR/MR bodies via files in shared createPr`**
+- [x] **`fix(extensions): pass PR/MR bodies via files in shared createPr`**
 
   Update `pi-extensions/_shared/git-internals.ts` so PR/MR creation writes the body to a temp file and passes it through `gh pr create --body-file <file>` and the equivalent GitLab description-file flag (with a fallback if not supported). This mirrors the manual workflow already adopted for opening PRs and avoids any edge-case escaping issues. Tests in `tests/git-internals.test.ts` and `tests/git-pr.test.ts` should adapt to the new argument shape. This anchors to `SPEC.md:135` (`git-pr`).
 
